@@ -1,42 +1,40 @@
-# Team workflow
+# Working together
 
-Keep `main` runnable: the lecturer may build it after the submission deadline. Do not treat a Git push as a Moodle submission.
+## Branches and pull requests
 
-## Daily work
+1. Pick an issue from the current sprint and agree who takes it.
+2. Create a branch from `main`: `feature/<issue>-description` or `fix/<issue>-description`.
+3. Move the task to **In progress**.
+4. Open a PR when it's ready, link the issue with `Closes #N`, and move it to **In review**.
+5. Have a teammate review it and check that CI passes.
+6. After merging and checking the result, move it to **Done**.
 
-1. Pick a small issue from the current sprint and assign it as a team.
-2. Create `feature/<issue>-short-description` or `fix/<issue>-short-description` from the agreed integration branch.
-3. Move the issue to In progress. Keep one or two active tasks per person.
-4. Commit focused changes, with tests and relevant documentation.
-5. Open a PR, link the issue using `Closes #N`, and move it to In review.
-6. A teammate reviews it; CI and acceptance criteria must pass before merge.
-7. Mark Done only once the work is merged and verified.
-
-Use `develop` as an integration branch if the team adopts full GitFlow; merge a reviewed, tested sprint increment into `main`. For this initial bootstrap the PR targets `main`. Do not create release branches or merge into main just to make the board look complete. Branch protection requires the repository owner's permissions; it is not configured by these files.
+Keep `main` runnable. Branch protection isn't configured yet; that needs the repository owner.
 
 ## Board and sprints
 
-Use the [SWEN3 kanban board](https://github.com/users/YannPolini/projects/4): **Backlog → Ready → In progress → In review → Done**. Six repository milestones define sprint scope. The course windows are planning context, not verified Moodle deadlines.
+[Kanban board](https://github.com/users/YannPolini/projects/4): **Backlog → Ready → In progress → In review → Done**.
 
-The board belongs to YannPolini, while the repository belongs to SimSta123. GitHub's repository Projects tab [only lists projects with the same owner](https://docs.github.com/en/issues/planning-and-tracking-with-projects/managing-your-project/adding-your-project-to-a-repository), so use the direct board link here. Repository write access does not automatically grant board editing access; the board owner must arrange that separately with the team. New issues must be added to the board; automatic import of future issues is not configured.
+Use the six repository milestones to group tasks by sprint. Add new issues to the board manually.
 
-- Sprint 1: setup, REST API, DAL, mapping and additional-use-case start.
-- Sprint 2: web UI and integration.
-- Sprint 3: queuing and mid-term review.
-- Sprint 4: workers, MinIO, OCR and Elasticsearch.
-- Sprint 5: GenAI and smartphone app.
-- Sprint 6: integration tests, scheduled XML batch processing and finalisation.
+The board is under YannPolini and the repository under SimSta123. GitHub [requires the same owner](https://docs.github.com/en/issues/planning-and-tracking-with-projects/managing-your-project/adding-your-project-to-a-repository) to show it in the repository's Projects tab, so use the link above. Teammate editing access still needs to be added on the board.
 
-Use [the sprint template](docs/sprints/TEMPLATE.md) to record the goal, scope, owners, acceptance criteria, review and retrospective. Keep issues, PRs and the board current. Do not invent deadlines or silently assign work to teammates.
+| Sprint | Focus |
+| --- | --- |
+| 1 | Setup, REST API, DAL, mapping and additional use case |
+| 2 | Web UI |
+| 3 | RabbitMQ and mid-term review |
+| 4 | MinIO, OCR and Elasticsearch |
+| 5 | AI summaries and mobile app |
+| 6 | Integration tests, XML batch processing and final review |
 
-## Definition of done
+Copy [the sprint template](docs/sprints/TEMPLATE.md) when planning a sprint. Confirm deadlines in Moodle.
 
-- Acceptance criteria work, including important invalid-input/error cases.
-- Automated checks pass; meaningful tests cover changed behaviour.
-- Source quality, mapping/layer boundaries, validation and logging are reviewed.
-- API contract and design/setup documentation reflect the change.
-- No secrets, generated output or personal course files are committed.
-- The author can explain what the code does, why it was written, and relevant external sources.
-- Review, merge, sprint submission and review appointment are recorded separately.
+## Before merging
 
-The course asks for exact URLs in comments where external sources are used. Record tool assistance honestly according to the lecturer's requirements and make sure every team member understands their submitted work.
+- Check the acceptance criteria, including error cases.
+- Run the tests and update any affected docs.
+- Keep secrets and generated files out of Git.
+- Be able to explain your changes and sources.
+
+Include source URLs in code comments and document tool assistance as required by the course. Submit the sprint ZIP separately through Moodle; pushing code doesn't submit it.

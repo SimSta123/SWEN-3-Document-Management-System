@@ -1,42 +1,34 @@
 # Sprint N: title
 
-Status: planned
-Planning window: YYYY-MM-DD to YYYY-MM-DD
-Official Moodle deadline: not confirmed
-Team members: fill in
-Sprint goal: one concrete, demonstrable outcome
+- Dates:
+- Moodle deadline:
+- Goal:
 
-## Scope
+## Tasks
 
-| Issue | Outcome | Owner | Estimate | Status |
+| Issue | Work | Owner | Estimate | Status |
 | --- | --- | --- | --- | --- |
 | # | | | | Todo |
 
-## Acceptance and demo
+## Demo
 
-- [ ] State what must work by the end of this sprint.
-- [ ] Include the relevant course must-have criteria.
-- [ ] Document repeatable demo/test commands.
+What should work, and how do we show it?
 
-## Definition of done
+- [ ] Course requirements for this sprint met
+- [ ] Tests and relevant error cases checked
+- [ ] PRs reviewed and CI passing
+- [ ] Docs and board updated
+- [ ] Everyone can explain their changes
 
-- [ ] Implementation reviewed in a pull request
-- [ ] CI passes; meaningful tests added with course coverage requirements considered
-- [ ] Acceptance criteria and relevant error cases verified
-- [ ] Documentation and board updated
-- [ ] Each contributor can explain their changes
-- [ ] Stable main branch and Moodle submission checked separately
+## Review
 
-## Review and retrospective
-
-Demo evidence:
-What worked:
-What to improve:
-Carry-over issues and reasons:
+- What worked:
+- What to improve:
+- Unfinished tasks:
 
 ## Submission
 
-ZIP filename:
-Commit SHA / tag:
-Moodle submission timestamp and confirmation:
-Review appointment:
+- Commit or tag:
+- ZIP filename:
+- Moodle submission date and confirmation:
+- Review appointment:

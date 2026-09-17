@@ -1,12 +1,12 @@
 name: Sprint task
-description: A small, testable piece of sprint work
+description: Plan a sprint task
 title: "[S1] "
 body:
   - type: textarea
     id: outcome
     attributes:
-      label: Outcome
-      description: What user or engineering outcome should this task achieve?
+      label: Task
+      description: What needs to be done?
     validations:
       required: true
   - type: input
@@ -29,12 +29,12 @@ body:
   - type: textarea
     id: tests
     attributes:
-      label: Verification
-      description: Tests, commands, or a reproducible demonstration.
+      label: Tests
+      description: How will we check it works?
     validations:
       required: true
   - type: textarea
     id: dependencies
     attributes:
       label: Dependencies and references
-      description: Related issues, course requirements, API or architecture decisions.
+      description: Related issues, requirements or docs.

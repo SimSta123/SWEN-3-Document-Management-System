@@ -1,17 +1,17 @@
-## Change
+## Changes
 
-What problem does this solve, and what changes for the user?
+Briefly describe the change.
 
 Closes #
 
-## Verification
+## Tests
 
-Commands/tests run and results:
+What did you run, and did it pass?
 
-## Review checklist
+## Checklist
 
 - [ ] Acceptance criteria met
-- [ ] Tests pass and error cases are covered
-- [ ] Relevant API/architecture/setup docs updated
-- [ ] No secrets or local files committed
-- [ ] Author can explain the implementation and external sources
+- [ ] Tests pass, including relevant error cases
+- [ ] Docs updated if needed
+- [ ] No secrets or local files included
+- [ ] Changes and sources understood

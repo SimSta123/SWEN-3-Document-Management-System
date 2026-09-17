@@ -1,42 +1,41 @@
-# Sprint 1: setup, REST API, DAL
+# Sprint 1: setup, REST API and DAL
 
-Status: setup prepared for review; domain implementation pending
-Course class window: 2026-09-14 to 2026-09-24
-Official Moodle deadline: not published in the 2026-09-17 snapshot
-Team: Group G; assign owners together
+- Team: Group G
+- Classes: 14–24 September 2026
+- Moodle deadline: not listed when checked on 17 September
 
 ## Goal
 
-Build and run the REST backend and PostgreSQL in Docker, persist documents through a layered design, and start the additional use case with a documented API and meaningful tests.
+Upload and manage documents through the REST API, store them in PostgreSQL, and start the additional use case.
 
-## Work breakdown
+## Tasks
 
-| Work | Outcome | Status |
+| Issue | Work | Status |
 | --- | --- | --- |
-| [#1 Bootstrap](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/1) | Java 25 / Spring Boot / Maven, Compose, health route, CI and team templates | Ready for review |
-| [#2 API contract](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/2) | Document upload/manage routes, OpenAPI and request examples | Ready |
-| [#3 Document DAL](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/3) | PostgreSQL migration, JPA entities, repositories and persistence tests | Todo |
-| [#4 Business layer and mapping](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/4) | Separate BL/API/DAL models, component interfaces, MapStruct | Todo |
-| [#5 Upload and management](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/5) | Working REST use cases with validation and error responses | Todo |
-| [#6 Additional use case](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/6) | Team selects entities/workflow and starts implementation | Decision needed |
-| [#7 Quality and hand-in](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/7) | >70% relevant test coverage, README/demo, ZIP and stable main | Todo |
+| [#1](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/1) | Project setup, Docker, CI and templates | Merged in PR #8 |
+| [#2](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/2) | API contract, OpenAPI and request examples | Ready |
+| [#3](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/3) | Document entities, migrations and repositories | Todo |
+| [#4](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/4) | Business components and layer mapping | Todo |
+| [#5](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/5) | Upload and management endpoints | Todo |
+| [#6](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/6) | Choose and start the additional use case | To decide |
+| [#7](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/7) | Tests, demo and hand-in | Todo |
 
-These tasks are recorded in repository issues, assigned to the Sprint 1 milestone, and imported into the [kanban board](https://github.com/users/YannPolini/projects/4). Six sprint milestones exist. The bootstrap is in review through [PR #8](https://github.com/SimSta123/SWEN-3-Document-Management-System/pull/8). Assign owners/estimates as a team; none are invented here. Potential additional use case: document status history (Document 1:n HistoryLog), pending team agreement.
+Track progress on the [board](https://github.com/users/YannPolini/projects/4). We'll agree owners and estimates together.
 
-## Must-have demonstration
+One idea for the additional use case is document status history: a document with multiple history entries. We haven't chosen it yet.
 
-1. No build errors.
-2. REST and PostgreSQL start.
-3. REST endpoints persist data in the database.
-4. Additional entities and use-case work are present.
-5. API docs, request scripts and tests accompany the implementation.
+## Demo checklist
 
-The bootstrap alone does not complete Sprint 1. The current starter page only verifies service availability.
+- [ ] Project builds and starts with Docker
+- [ ] REST endpoints save and retrieve documents in PostgreSQL
+- [ ] Additional entities and initial use-case implementation are included
+- [ ] OpenAPI docs and request examples are up to date
+- [ ] Tests cover the new behaviour and meet the course's >70% coverage target
 
-## Git and submission
+The setup is merged and its checks passed. Document features are still open.
 
-Use feature branches and pull requests; keep main runnable. Repository link emailed to lecturer, per user report on 2026-09-17. Moodle's separate repository-link activity still needs confirmation. Submit the full project ZIP through Moodle; the teacher may build main at a random time after the deadline.
+## Hand-in
 
-## Review / retrospective / evidence
+The repository link has been emailed to the lecturer. Confirm the separate Moodle link submission and the sprint deadline. Submit the full project ZIP through Moodle and keep `main` runnable for the lecturer's build.
 
-Complete these fields when the sprint ends using TEMPLATE.md. Do not pre-mark the submission or tests complete.
+At the end of the sprint, record the review, remaining tasks and submission details using [the template](TEMPLATE.md).

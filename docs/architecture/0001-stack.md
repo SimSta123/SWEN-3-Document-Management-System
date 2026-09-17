@@ -1,32 +1,42 @@
-# ADR 0001: initial stack and boundaries
+# 0001: Initial stack
 
 Date: 2026-09-17
-Status: initial setup; frontend choice can be revisited before Sprint 2
 
-## Context
+## Choices
 
-The course requires Java 25+ / Spring Boot or C#/.NET, layered code, ORM repositories, a separate web UI, Docker Compose, and staged integration of queues/workers/storage/search/GenAI. The existing repository contained only a README and Git ignore file. The user chose a Spring Boot direction.
+We use Java 25, Spring Boot 4.1.1 and Maven, with PostgreSQL 17 for storage. This follows the course's Java option.
 
-## Decision
+Spring Data JPA handles persistence, Flyway manages schema changes, MapStruct maps between layers, and Bean Validation checks input. H2 is used for tests only. The document model and migrations are still to be added.
 
-Use Java 25, Spring Boot 4.1.1 and Maven Wrapper. Use PostgreSQL 17, Spring Data JPA, Flyway migrations, MapStruct and Bean Validation. H2 is test-only; PostgreSQL remains the actual database.
+The frontend starts with HTML, CSS and JavaScript served by nginx. It matches the course exercise and keeps the setup small. We can revisit the frontend choice before Sprint 2.
 
-Start with HTML/CSS/JavaScript served by nginx, with same-origin `/api/` proxying to the backend. This minimises setup and matches the course exercise. Maven does not serve as a frontend framework. A React/TypeScript/Vite frontend can replace the static UI if agreed by the team.
+## Structure
 
-Use three application layers: API facade with DTOs; business components with business models and interfaces; persistence entities/repositories. Add packages and real interfaces with the first domain feature instead of committing placeholder abstractions. MapStruct maps between layers. Flyway is enabled now; actual schema migrations arrive with the document/domain model.
+The application will have three layers:
 
-Run the web server, API and database in Compose. Bind development HTTP ports to localhost, and keep the database internal. Readiness checks the actual database connection. On this laptop API port 8081 is used by another project, so the local untracked configuration uses 18081; repository defaults remain 8081.
+- API: controllers and request/response DTOs
+- Business: models, rules and component interfaces
+- DAL: database entities and repositories
 
-Add RabbitMQ in Sprint 3; MinIO/OCR/indexing/Elasticsearch workers in Sprint 4; GenAI and mobile client in Sprint 5; integration/batch services in Sprint 6. Do not pre-start empty containers for services that have no behaviour yet.
+We'll add these with the first document feature, using MapStruct between the models.
 
-## Consequences
+Docker Compose runs nginx, the API and PostgreSQL. nginx forwards `/api/` requests to the backend. HTTP ports are bound to localhost; PostgreSQL stays inside the Docker network. The readiness endpoint checks the database connection.
 
-Docker supports a Java 25 build even when the host has Java 21. IDE compilation still requires installing/configuring Java 25. Image tags track maintained releases within selected major lines; dependency updates should be deliberate and tested. CI runs backend tests and a real PostgreSQL-backed Compose smoke check. The scaffold does not demonstrate document persistence, upload or the additional use case.
+## Later sprints
+
+- Sprint 3: RabbitMQ
+- Sprint 4: MinIO, OCR workers and Elasticsearch
+- Sprint 5: AI summary worker and mobile app
+- Sprint 6: integration tests and XML batch processing
+
+## Build and tests
+
+Docker builds with Java 25. Local IDE builds also need JDK 25. CI runs the backend tests and starts the full Compose stack for a health check. Image tags follow the selected major versions; updates need testing.
 
 ## References
 
-- Course project PDF and assessment matrix, checked 2026-09-17; full teaching materials are held in the team's course-document folder.
-- https://docs.spring.io/spring-boot/system-requirements.html
-- https://mapstruct.org/documentation/stable/reference/html/
-- https://www.jacoco.org/jacoco/trunk/doc/changes.html
-- https://docs.docker.com/compose/
+- Course project PDF and grading rubric, checked 2026-09-17
+- [Spring Boot requirements](https://docs.spring.io/spring-boot/system-requirements.html)
+- [MapStruct](https://mapstruct.org/documentation/stable/reference/html/)
+- [JaCoCo Java support](https://www.jacoco.org/jacoco/trunk/doc/changes.html)
+- [Docker Compose](https://docs.docker.com/compose/)
