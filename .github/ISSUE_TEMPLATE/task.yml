@@ -1,0 +1,40 @@
+name: Sprint task
+description: A small, testable piece of sprint work
+title: "[S1] "
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+      description: What user or engineering outcome should this task achieve?
+    validations:
+      required: true
+  - type: input
+    id: sprint
+    attributes:
+      label: Sprint
+      placeholder: "Sprint 1: setup, REST API, DAL"
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      value: |
+        - [ ] Behaviour implemented and verified
+        - [ ] Error cases covered
+        - [ ] Documentation updated where needed
+    validations:
+      required: true
+  - type: textarea
+    id: tests
+    attributes:
+      label: Verification
+      description: Tests, commands, or a reproducible demonstration.
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and references
+      description: Related issues, course requirements, API or architecture decisions.

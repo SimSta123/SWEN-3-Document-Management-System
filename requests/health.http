@@ -1,0 +1,8 @@
+@api = http://localhost:8081
+@web = http://localhost
+
+### Backend readiness (includes the database)
+GET {{api}}/actuator/health/readiness
+
+### Same-origin route used by the web UI
+GET {{web}}/api/health
