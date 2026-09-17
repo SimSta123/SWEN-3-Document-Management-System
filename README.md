@@ -4,6 +4,8 @@ Team project for Software Engineering 3, WS 2026. The target application uploads
 
 **Current state:** development scaffold. Docker starts the web frontend, Spring Boot API and PostgreSQL. The landing page checks service availability. Document upload, persistence entities, search and workers are still backlog items; Sprint 1 is not complete.
 
+Planning: [Kanban board](https://github.com/users/YannPolini/projects/4) · [Sprint milestones](https://github.com/SimSta123/SWEN-3-Document-Management-System/milestones) · [Setup review PR #8](https://github.com/SimSta123/SWEN-3-Document-Management-System/pull/8).
+
 ## Stack
 
 | Part | Choice | Stage |

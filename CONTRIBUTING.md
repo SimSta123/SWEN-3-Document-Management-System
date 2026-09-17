@@ -16,7 +16,9 @@ Use `develop` as an integration branch if the team adopts full GitFlow; merge a 
 
 ## Board and sprints
 
-Suggested columns: **Todo → In progress → In review → Done**. Keep future work in a Backlog column or a separate filtered view. Use six sprint milestones and a board Sprint/iteration field when available. The course windows are planning context, not verified Moodle deadlines.
+Use the [SWEN3 kanban board](https://github.com/users/YannPolini/projects/4): **Backlog → Ready → In progress → In review → Done**. Six repository milestones define sprint scope. The course windows are planning context, not verified Moodle deadlines.
+
+The board belongs to YannPolini, while the repository belongs to SimSta123. GitHub's repository Projects tab [only lists projects with the same owner](https://docs.github.com/en/issues/planning-and-tracking-with-projects/managing-your-project/adding-your-project-to-a-repository), so use the direct board link here. Repository write access does not automatically grant board editing access; the board owner must arrange that separately with the team. New issues must be added to the board; automatic import of future issues is not configured.
 
 - Sprint 1: setup, REST API, DAL, mapping and additional-use-case start.
 - Sprint 2: web UI and integration.

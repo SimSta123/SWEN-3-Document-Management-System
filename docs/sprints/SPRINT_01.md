@@ -14,14 +14,14 @@ Build and run the REST backend and PostgreSQL in Docker, persist documents throu
 | Work | Outcome | Status |
 | --- | --- | --- |
 | [#1 Bootstrap](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/1) | Java 25 / Spring Boot / Maven, Compose, health route, CI and team templates | Ready for review |
-| [#2 API contract](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/2) | Document upload/manage routes, OpenAPI and request examples | Todo |
+| [#2 API contract](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/2) | Document upload/manage routes, OpenAPI and request examples | Ready |
 | [#3 Document DAL](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/3) | PostgreSQL migration, JPA entities, repositories and persistence tests | Todo |
 | [#4 Business layer and mapping](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/4) | Separate BL/API/DAL models, component interfaces, MapStruct | Todo |
 | [#5 Upload and management](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/5) | Working REST use cases with validation and error responses | Todo |
 | [#6 Additional use case](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/6) | Team selects entities/workflow and starts implementation | Decision needed |
 | [#7 Quality and hand-in](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/7) | >70% relevant test coverage, README/demo, ZIP and stable main | Todo |
 
-These tasks are recorded in repository issues and assigned to the Sprint 1 milestone. Six sprint milestones exist. GitHub Projects board creation is pending authenticated Projects access. Assign owners/estimates as a team; none are invented here. Potential additional use case: document status history (Document 1:n HistoryLog), pending team agreement.
+These tasks are recorded in repository issues, assigned to the Sprint 1 milestone, and imported into the [kanban board](https://github.com/users/YannPolini/projects/4). Six sprint milestones exist. The bootstrap is in review through [PR #8](https://github.com/SimSta123/SWEN-3-Document-Management-System/pull/8). Assign owners/estimates as a team; none are invented here. Potential additional use case: document status history (Document 1:n HistoryLog), pending team agreement.
 
 ## Must-have demonstration
 
