@@ -1,0 +1,40 @@
+name: Sprint task
+description: Plan a sprint task
+title: "[S1] "
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Task
+      description: What needs to be done?
+    validations:
+      required: true
+  - type: input
+    id: sprint
+    attributes:
+      label: Sprint
+      placeholder: "Sprint 1: setup, REST API, DAL"
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      value: |
+        - [ ] Behaviour implemented and verified
+        - [ ] Error cases covered
+        - [ ] Documentation updated where needed
+    validations:
+      required: true
+  - type: textarea
+    id: tests
+    attributes:
+      label: Tests
+      description: How will we check it works?
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and references
+      description: Related issues, requirements or docs.
