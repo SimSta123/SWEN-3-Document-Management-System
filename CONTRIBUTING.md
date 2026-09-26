@@ -28,7 +28,7 @@ The board is under YannPolini and the repository under SimSta123. GitHub [requir
 | 5 | AI summaries and mobile app |
 | 6 | Integration tests, XML batch processing and final review |
 
-Copy [the sprint template](docs/sprints/TEMPLATE.md) when planning a sprint. Confirm deadlines in Moodle.
+Use the board and milestones to plan each sprint. Confirm deadlines in Moodle.
 
 ## Before merging
 
