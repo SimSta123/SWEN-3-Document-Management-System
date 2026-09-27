@@ -1,0 +1,34 @@
+@baseUrl = http://localhost:8081
+# Replace these IDs with the values returned by the create requests below.
+@projectId = 1
+@documentId = 1
+
+### Create a project (201)
+POST {{baseUrl}}/projects
+Content-Type: application/json
+
+{"name":"SWEN3","description":"Course documents"}
+
+### List projects (200)
+GET {{baseUrl}}/projects
+
+### Create a document metadata record, without uploading a file (201)
+POST {{baseUrl}}/documents
+Content-Type: application/json
+
+{"title":"Sprint 1 notes"}
+
+### Assign the document; repeating this request does not duplicate it (200)
+PUT {{baseUrl}}/projects/{{projectId}}/documents/{{documentId}}
+
+### List the project's documents (200)
+GET {{baseUrl}}/projects/{{projectId}}/documents
+
+### Reject a blank project name (400)
+POST {{baseUrl}}/projects
+Content-Type: application/json
+
+{"name":" "}
+
+### Unknown project (404)
+GET {{baseUrl}}/projects/0/documents
