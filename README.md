@@ -52,7 +52,9 @@ cd backend
 ./mvnw verify
 ```
 
-On Windows, use `mvnw.cmd verify`. Coverage reports are in `backend/target/site/jacoco/index.html`. The current tests cover startup and health checks using H2; PostgreSQL repository tests will be added with the document model. The course coverage target is >70%.
+On Windows, use `mvnw.cmd verify`. Coverage reports are in `backend/target/site/jacoco/index.html`. The course coverage target is >70%; the current build generates the report without enforcing a minimum.
+
+Run only the service unit tests with `mvnw.cmd -Dtest=SampleServiceTest test`, or run the entire suite and coverage report with `mvnw.cmd verify` (JDK 25 required).
 
 To run the API outside Docker, set `DB_URL`, `DB_USER` and `DB_PASSWORD` for an accessible PostgreSQL instance, then run `./mvnw spring-boot:run`.
 
