@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
+import org.slf4j.Logger;
 
 import java.util.List;
 import java.util.Optional;
@@ -40,9 +41,12 @@ class DefaultProjectServiceTest {
 
     private DefaultProjectService service;
 
+    @Mock
+    private Logger logger;
+
     @BeforeEach
     void setUp() {
-        service = new DefaultProjectService(projects, documents, mapper);
+        service = new DefaultProjectService(projects, documents, mapper, logger);
     }
 
     @Test
