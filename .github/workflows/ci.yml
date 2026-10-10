@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, develop, "feature/**", "fix/**"]
+    branches: [main, "sprint-*", "feature/**", "fix/**"]
   pull_request:
-    branches: [main, develop]
+    branches: [main, "sprint-*"]
 
 permissions:
   contents: read
@@ -44,8 +44,14 @@ jobs:
       - name: Check frontend and database-backed health route
         run: |
           curl --fail --retry 5 --retry-delay 2 http://localhost:8088/ -o /tmp/paperless.html
-          grep -q "A place for your documents" /tmp/paperless.html
+          grep -q 'id="document-form"' /tmp/paperless.html
           curl --fail http://localhost:8088/api/health | python3 -c 'import json,sys; assert json.load(sys.stdin)["status"] == "UP"'
+          curl --fail --silent http://localhost:8088/api/documents | python3 -c 'import json,sys; assert json.load(sys.stdin) == []'
+          curl --fail --silent -H 'Content-Type: application/json' -d '{"title":"CI document"}' http://localhost:8088/api/documents -o /tmp/created-document.json
+          document_id=$(python3 -c 'import json; print(json.load(open("/tmp/created-document.json"))["id"])')
+          curl --fail --silent "http://localhost:8088/api/documents/$document_id" | python3 -c 'import json,sys; doc=json.load(sys.stdin); assert doc["title"] == "CI document" and doc["projectId"] is None'
+          curl --fail --silent "http://localhost:8088/document.html?id=$document_id" -o /tmp/paperless-detail.html
+          grep -q 'id="document-details"' /tmp/paperless-detail.html
       - name: Show service logs
         if: failure()
         run: docker compose logs --no-color

@@ -8,6 +8,8 @@ public interface ProjectService {
     Project createProject(String name, String description);
     List<Project> listProjects();
     Document createDocument(String title);
+    List<Document> listAllDocuments();
+    Document getDocument(Long documentId);
     Document assignDocument(Long projectId, Long documentId);
     List<Document> listDocuments(Long projectId);
 }

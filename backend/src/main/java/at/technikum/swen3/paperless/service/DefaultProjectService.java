@@ -59,6 +59,17 @@ public class DefaultProjectService implements ProjectService {
     }
 
     @Override
+    public List<Document> listAllDocuments() {
+        return documents.findAll(Sort.by("id")).stream().map(mapper::toDocument).toList();
+    }
+
+    @Override
+    public Document getDocument(Long documentId) {
+        return documents.findById(documentId).map(mapper::toDocument)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
+    }
+
+    @Override
     public List<Document> listDocuments(Long projectId) {
         if (!projects.existsById(projectId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found");

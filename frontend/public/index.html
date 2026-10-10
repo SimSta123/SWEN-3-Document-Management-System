@@ -3,27 +3,48 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Paperless · SWEN3</title>
+  <title>Documents · Paperless</title>
   <link rel="stylesheet" href="/styles.css">
   <script src="/app.js" defer></script>
 </head>
-<body>
+<body data-page="dashboard">
+  <header class="site-header">
+    <a class="brand" href="/">paperless<span class="brand-dot">.</span></a>
+    <span class="header-label">Your document library</span>
+  </header>
   <main>
-    <p class="eyebrow">SWEN3 · DOCUMENT MANAGEMENT</p>
-    <h1>A place for your documents.</h1>
-    <p class="intro">Upload, organise and find your documents. We are building the first version.</p>
-    <section aria-labelledby="status-title">
-      <h2 id="status-title">Service status</h2>
-      <p id="status" role="status">Checking availability…</p>
-      <button id="refresh" type="button">Check again</button>
-    </section>
-    <section aria-labelledby="db works?">
-      <h2 id="status-title">db status</h2>
-      <p id="dbstatus" role="status">Checking availability…</p>
-      <button id="dbrefresh" type="button">Check again</button>
-    </section>
-    <p class="note">Document upload and management are planned for Sprint 1.</p>
-    
+    <div class="page-heading">
+      <p class="eyebrow">YOUR WORKSPACE</p>
+      <h1>Documents</h1>
+      <p class="intro">Keep your documents together. Find the details in a click.</p>
+    </div>
+    <div class="workspace">
+      <section class="panel library" aria-labelledby="library-title">
+        <div class="panel-heading">
+          <div><h2 id="library-title">Your library</h2><p id="library-count" class="muted">Loading documents…</p></div>
+          <button id="refresh" class="button secondary" type="button">Refresh</button>
+        </div>
+        <p id="library-status" class="message" role="status">Loading your library…</p>
+        <div id="document-groups"></div>
+      </section>
+      <aside>
+        <section class="panel" aria-labelledby="add-title">
+          <p class="eyebrow">START SOMETHING NEW</p>
+          <h2 id="add-title">Add a document</h2>
+          <p class="muted">Give your document a title to save a record in your library.</p>
+          <form id="document-form" novalidate>
+            <label for="document-title">Document title</label>
+            <input id="document-title" name="title" type="text" required maxlength="255" aria-describedby="title-help form-error" placeholder="e.g. Sprint 2 notes">
+            <p id="title-help" class="field-help">A title is required. Maximum 255 characters.</p>
+            <p id="form-error" class="message error" role="alert" hidden></p>
+            <button id="save" class="button" type="submit">Save document <span aria-hidden="true">↗</span></button>
+            <p id="form-status" class="message success" role="status" hidden></p>
+          </form>
+        </section>
+        <p class="aside-note">Documents without a project appear under Unassigned.</p>
+      </aside>
+    </div>
   </main>
+  <footer>Paperless <span aria-hidden="true">·</span> SWEN3</footer>
 </body>
 </html>

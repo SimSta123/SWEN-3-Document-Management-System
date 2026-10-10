@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Document details · Paperless</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body data-page="detail">
+  <header class="site-header">
+    <a class="brand" href="/">paperless<span class="brand-dot">.</span></a>
+    <span class="header-label">Your document library</span>
+  </header>
+  <main class="detail-main">
+    <a class="back-link" href="/">← Back to documents</a>
+    <div class="page-heading">
+      <p class="eyebrow">DOCUMENT DETAILS</p>
+      <h1 id="document-heading">Document</h1>
+      <p class="intro">The information saved in your library.</p>
+    </div>
+    <section class="panel" aria-labelledby="details-title">
+      <div class="panel-heading">
+        <h2 id="details-title">Saved information</h2>
+        <button id="refresh" class="button secondary" type="button">Refresh</button>
+      </div>
+      <p id="detail-status" class="message" role="status">Loading document…</p>
+      <dl id="document-details" hidden>
+        <div><dt>Title</dt><dd id="detail-title"></dd></div>
+        <div><dt>Document ID</dt><dd id="detail-id"></dd></div>
+        <div><dt>Project</dt><dd id="detail-project"></dd></div>
+      </dl>
+    </section>
+  </main>
+  <footer>Paperless <span aria-hidden="true">·</span> SWEN3</footer>
+</body>
+</html>

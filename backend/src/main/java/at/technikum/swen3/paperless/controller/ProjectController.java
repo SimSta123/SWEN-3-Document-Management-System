@@ -47,6 +47,16 @@ public class ProjectController {
         return service.assignDocument(projectId, documentId);
     }
 
+    @GetMapping("/documents")
+    public List<Document> listAllDocuments() {
+        return service.listAllDocuments();
+    }
+
+    @GetMapping("/documents/{documentId}")
+    public Document getDocument(@PathVariable Long documentId) {
+        return service.getDocument(documentId);
+    }
+
     @GetMapping("/projects/{projectId}/documents")
     public List<Document> listDocuments(@PathVariable Long projectId) {
         return service.listDocuments(projectId);

@@ -1,15 +1,16 @@
 # Working together
 
-## Branches and pull requests
+## Sprint branches
 
 1. Pick an issue from the current sprint and agree who takes it.
-2. Create a branch from `main`: `feature/<issue>-description` or `fix/<issue>-description`.
-3. Move the task to **In progress**.
-4. Open a PR when it's ready, link the issue with `Closes #N`, and move it to **In review**.
-5. Have a teammate review it and check that CI passes.
-6. After merging and checking the result, move it to **Done**.
+2. At the start of a sprint, create a shared branch from `main`, such as `sprint-2` or `sprint-3`.
+3. Create feature or fix branches from that sprint branch: `feature/<issue>-description` or `fix/<issue>-description`.
+4. Move the task to **In progress** while implementing it.
+5. Test the feature, commit it with the issue numbers, merge it into the sprint branch and push. Move the task to **In review** for the final integration check. Pull requests and teammate reviews are optional.
+6. Pull the latest sprint branch before merging or pushing. Resolve conflicts without overwriting the other person's changes.
+7. Once the whole sprint builds, runs and passes its checks, merge the sprint branch into `main`, push and move completed tasks to **Done**. Start the next sprint branch from the updated `main`.
 
-Keep `main` runnable. Branch protection isn't configured yet; that needs the repository owner.
+Keep `main` runnable. A separate `develop` branch is unnecessary with this workflow. Branch protection isn't configured yet; that needs the repository owner.
 
 ## Board and sprints
 
