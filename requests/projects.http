@@ -18,6 +18,15 @@ Content-Type: application/json
 
 {"title":"Sprint 1 notes"}
 
+### List all saved documents, including unassigned ones (200)
+GET {{baseUrl}}/documents
+
+### Read one saved document (200)
+GET {{baseUrl}}/documents/{{documentId}}
+
+### Unknown document (404)
+GET {{baseUrl}}/documents/9223372036854775807
+
 ### Assign the document; repeating this request does not duplicate it (200)
 PUT {{baseUrl}}/projects/{{projectId}}/documents/{{documentId}}
 

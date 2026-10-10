@@ -28,11 +28,19 @@ You need Docker Desktop with Linux containers enabled.
    docker compose up --build --detach --wait
    ```
 
-3. Open [localhost](http://localhost/) for the basic web page. The API runs at [localhost:8081](http://localhost:8081).
+3. Open [localhost](http://localhost/) for the website. The API uses [localhost:8081](http://localhost:8081) by default.
 
-The default ports are 80 for the web page, 8081 for the API and 5432 for PostgreSQL. If needed, change `WEB_PORT` and `API_PORT` in `.env`; the database port is set in `compose.yaml`.
+The default ports are 80 for the web page and 8081 for the API. If needed, change `WEB_PORT` and `API_PORT` in `.env`. PostgreSQL is reachable by the backend inside Docker; it does not publish a host port.
 
 Stop the services with `docker compose down`. The database volume is kept. Keep `.env` out of Git. Changing its password does not change the password in an existing database volume.
+
+## Sprint 2 website
+
+The dashboard lists saved documents under their projects. You can collapse each project, and documents without a project appear under Unassigned. Add a document by entering a title, then click it to see its title, ID and project. Titles must not be blank or longer than 255 characters. Refreshing loads the saved records again. The pages show a message when the library is empty, a request fails or a document is missing.
+
+The website sends requests through nginx at `/api/`. nginx removes that prefix before passing the request to the backend. The frontend runs in its own Docker container. For now, we save document titles and project links; file uploads come later.
+
+We used OpenAI Codex to help build and check the Sprint 2 pages, document reads and server setup. Source links are included in the code.
 
 ## Try the API
 
@@ -43,6 +51,8 @@ The [project requests](requests/projects.http) show the workflow: create a proje
 | POST | `/projects` | Create a project |
 | GET | `/projects` | List projects |
 | POST | `/documents` | Create a document record |
+| GET | `/documents` | List all document records, including unassigned ones |
+| GET | `/documents/{documentId}` | Read one document record; unknown IDs return 404 |
 | PUT | `/projects/{projectId}/documents/{documentId}` | Assign or move a document |
 | GET | `/projects/{projectId}/documents` | List a project's documents |
 
@@ -52,7 +62,7 @@ There are also [health requests](requests/health.http) to check the backend and 
 
 The Docker build runs the automated tests. To run them locally with JDK 25, use `./mvnw verify` from `backend/`, or `mvnw.cmd verify` on Windows. The coverage report is generated at `backend/target/site/jacoco/index.html`.
 
-The two existing tests check the database connection and backend readiness using H2. We also checked project creation, document assignment, moving documents and error responses against PostgreSQL. Saved data remained after restarting the backend and database. Automated tests for the project feature are the next step.
+We currently have 22 tests for the services, startup, document reads and title creation. The read tests include an empty list, documents with and without a project, one document by ID and a missing document. We also checked the website in the browser: validation, saving, project lists, details and refreshing. The remaining Sprint 2 backend tests are a separate task.
 
 ## Technologies and team workflow
 
