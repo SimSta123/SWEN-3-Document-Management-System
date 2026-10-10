@@ -2,23 +2,23 @@
 
 ## Sprint branches
 
-1. Pick an issue from the current sprint and agree who takes it.
-2. At the start of a sprint, create a shared branch from `main`, such as `sprint-2` or `sprint-3`.
-3. Create feature or fix branches from that sprint branch: `feature/<issue>-description` or `fix/<issue>-description`.
-4. Move the task to **In progress** while implementing it.
-5. Test the feature, commit it with the issue numbers, merge it into the sprint branch and push. Move the task to **In review** for the final integration check. Pull requests and teammate reviews are optional.
-6. Pull the latest sprint branch before merging or pushing. Resolve conflicts without overwriting the other person's changes.
-7. Once the whole sprint builds, runs and passes its checks, merge the sprint branch into `main`, push and move completed tasks to **Done**. Start the next sprint branch from the updated `main`.
+1. Assign yourself a task from the current sprint.
+2. Start each sprint with a branch from `main`, for example `sprint-2`.
+3. Make a feature branch from the sprint branch, for example `feature/13-dashboard`.
+4. Move the task to **In progress** and do the work.
+5. Test it, commit it with the issue number and merge it into the sprint branch. Move the task to **In review**.
+6. Pull before merging or pushing so you have the other person's changes too.
+7. Check the whole app before submission. When the sprint works, merge it into `main` and move the finished tasks to **Done**. Create the next sprint branch from the updated `main`.
 
-Keep `main` runnable. A separate `develop` branch is unnecessary with this workflow. Branch protection isn't configured yet; that needs the repository owner.
+We merge branches directly, so we do not need pull requests or teammate reviews. **In review** means the work is implemented and waiting for the final app check. Keep `main` working and use the sprint branch for work in progress.
 
 ## Board and sprints
 
 [Kanban board](https://github.com/users/YannPolini/projects/4): **Backlog → Ready → In progress → In review → Done**.
 
-Use the six repository milestones to group tasks by sprint. Add new issues to the board manually.
+Use the milestones to group tasks by sprint. Add new issues to the board.
 
-The board is under YannPolini and the repository under SimSta123. GitHub [requires the same owner](https://docs.github.com/en/issues/planning-and-tracking-with-projects/managing-your-project/adding-your-project-to-a-repository) to show it in the repository's Projects tab, so use the link above. Teammate editing access still needs to be added on the board.
+The board belongs to YannPolini and the repository to SimSta123, so open the board using the link above or at the top of the README.
 
 | Sprint | Focus |
 | --- | --- |
@@ -31,11 +31,11 @@ The board is under YannPolini and the repository under SimSta123. GitHub [requir
 
 Use the board and milestones to plan each sprint. Confirm deadlines in Moodle.
 
-## Before merging
+## Before submission
 
-- Check the acceptance criteria, including error cases.
+- Check that each task works, including invalid input and errors.
 - Run the tests and update any affected docs.
-- Keep secrets and generated files out of Git.
+- Keep passwords, `.env` and build output out of Git.
 - Be able to explain your changes and sources.
 
 Include source URLs in code comments and document tool assistance as required by the course. Submit the sprint ZIP separately through Moodle; pushing code doesn't submit it.

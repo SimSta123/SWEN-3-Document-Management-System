@@ -3,6 +3,8 @@
 Software Engineering 3 Labor, WS 2026 — Group G
 Yann Polini and Simon Stangelberger
 
+[Kanban board](https://github.com/users/YannPolini/projects/4) · [Sprint milestones](https://github.com/SimSta123/SWEN-3-Document-Management-System/milestones) · [Working together](CONTRIBUTING.md)
+
 We are building a document management system as our semester project. The aim is to upload and organise documents, with text recognition, search and AI summaries added during the later sprints.
 
 ## Sprint 1
@@ -26,7 +28,7 @@ You need Docker Desktop with Linux containers enabled.
    docker compose up --build --detach --wait
    ```
 
-3. Open [localhost](http://localhost/) for the basic web page. The API runs at [localhost:8081](http://localhost:8081).
+3. Open [localhost](http://localhost/) for the website. The API uses [localhost:8081](http://localhost:8081) by default.
 
 The default ports are 80 for the web page and 8081 for the API. If needed, change `WEB_PORT` and `API_PORT` in `.env`. PostgreSQL is reachable by the backend inside Docker; it does not publish a host port.
 
@@ -34,11 +36,11 @@ Stop the services with `docker compose down`. The database volume is kept. Keep 
 
 ## Sprint 2 website
 
-The dashboard at [localhost](http://localhost/) lists saved document records, grouped into collapsible projects and an Unassigned group. The title form rejects empty titles and limits input to 255 characters. Click a document to open `/document.html?id=<id>` and see its title, ID and project. Refreshing reloads saved data from the backend. Empty, loading, failed-request and missing-document states are handled on the website.
+The dashboard lists saved documents under their projects. You can collapse each project, and documents without a project appear under Unassigned. Add a document by entering a title, then click it to see its title, ID and project. Titles must not be blank or longer than 255 characters. Refreshing loads the saved records again. The pages show a message when the library is empty, a request fails or a document is missing.
 
-The website calls the API through nginx's `/api/` proxy. This prefix is removed before forwarding requests to Spring. The frontend runs in its own Compose container. This version works with document metadata; it does not upload file contents.
+The website sends requests through nginx at `/api/`. nginx removes that prefix before passing the request to the backend. The frontend runs in its own Docker container. For now, we save document titles and project links; file uploads come later.
 
-Implementation assistance: OpenAI Codex helped implement and check the Sprint 2 dashboard, detail page, REST reads and nginx/Compose integration. References are included near the relevant code.
+We used OpenAI Codex to help build and check the Sprint 2 pages, document reads and server setup. Source links are included in the code.
 
 ## Try the API
 
@@ -60,10 +62,10 @@ There are also [health requests](requests/health.http) to check the backend and 
 
 The Docker build runs the automated tests. To run them locally with JDK 25, use `./mvnw verify` from `backend/`, or `mvnw.cmd verify` on Windows. The coverage report is generated at `backend/target/site/jacoco/index.html`.
 
-The suite contains 22 tests: service unit tests, startup/readiness checks and five HTTP integration tests for document reads and title creation. The read tests cover an empty library, assigned and unassigned records, a selected document and a missing ID. The browser workflow is also checked against PostgreSQL through nginx: title validation, saving, project grouping, detail pages and refresh persistence. The broader Sprint 2 controller/business test task remains separate.
+We currently have 22 tests for the services, startup, document reads and title creation. The read tests include an empty list, documents with and without a project, one document by ID and a missing document. We also checked the website in the browser: validation, saving, project lists, details and refreshing. The remaining Sprint 2 backend tests are a separate task.
 
 ## Technologies and team workflow
 
 We use Java 25, Spring Boot 4.1.1, Maven, PostgreSQL 17, Spring Data JPA, Flyway and MapStruct. The basic frontend uses HTML, CSS and JavaScript served by nginx.
 
-We track tasks on our [Kanban board](https://github.com/users/YannPolini/projects/4) and group them by [sprint milestones](https://github.com/SimSta123/SWEN-3-Document-Management-System/milestones). See [CONTRIBUTING.md](CONTRIBUTING.md) for the team workflow.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how we use feature and sprint branches.
