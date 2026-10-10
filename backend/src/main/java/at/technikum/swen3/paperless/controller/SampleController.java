@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/one")
-//@CrossOrigin(origins = {"http://localhost", "http://127.0.0.1"})
 public class SampleController {
 
     private final SampleService service;

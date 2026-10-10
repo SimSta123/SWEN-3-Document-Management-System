@@ -2,7 +2,6 @@ package at.technikum.swen3.paperless.model;
 
 import jakarta.persistence.*;
 
-// JPA entity reference: https://jakarta.ee/specifications/persistence/3.2/jakarta-persistence-spec-3.2
 @Entity
 @Table(name = "projects")
 public class ProjectEntity {
