@@ -3,6 +3,8 @@
 Software Engineering 3 Labor, WS 2026 — Group G
 Yann Polini and Simon Stangelberger
 
+[Kanban board](https://github.com/users/YannPolini/projects/4) · [Sprint milestones](https://github.com/SimSta123/SWEN-3-Document-Management-System/milestones) · [Working together](CONTRIBUTING.md)
+
 We are building a document management system as our semester project. The aim is to upload and organise documents, with text recognition, search and AI summaries added during the later sprints.
 
 ## Sprint 1
@@ -56,4 +58,4 @@ The two existing tests check the database connection and backend readiness using
 
 We use Java 25, Spring Boot 4.1.1, Maven, PostgreSQL 17, Spring Data JPA, Flyway and MapStruct. The basic frontend uses HTML, CSS and JavaScript served by nginx.
 
-We track tasks on our [Kanban board](https://github.com/users/YannPolini/projects/4) and group them by [sprint milestones](https://github.com/SimSta123/SWEN-3-Document-Management-System/milestones). See [CONTRIBUTING.md](CONTRIBUTING.md) for the team workflow.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how we use feature and sprint branches.
