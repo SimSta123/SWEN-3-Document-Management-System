@@ -35,6 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       POSTGRES_PASSWORD: ci-only-disposable-password
+      RABBITMQ_PASSWORD: ci-only-rabbitmq-password
       WEB_PORT: "8088"
       API_PORT: "8081"
     steps:
