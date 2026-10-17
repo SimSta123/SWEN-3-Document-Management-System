@@ -11,6 +11,8 @@ import at.technikum.swen3.paperless.service.model.Project;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -89,28 +91,17 @@ class DefaultProjectServiceTest {
         assertThat(result).isEqualTo(expected);
     }
 
-    @Test
-    void createProjectRejectsNullName() {
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"   ", "\t", "\n"})
+    //Testen null, "", "  " und umbruch in ""
+    void createProjectRejectsBlankName(String name) {
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> service.createProject(null, "")
+                () -> service.createProject(name, "")
         );
 
-        assertThat(exception.getStatusCode())
-                .isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(exception.getReason())
-                .isEqualTo("Project name must not be blank");
-
-        verifyNoInteractions(projects, documents, mapper);
-    }
-
-    @Test
-    void createProjectRejectsBlankName() {
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> service.createProject("   ", "")
-        );
-
-        assertThat(exception.getStatusCode())
-                .isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(exception.getReason()).isEqualTo("Project name must not be blank");
 
         verifyNoInteractions(projects, documents, mapper);
     }
@@ -121,8 +112,7 @@ class DefaultProjectServiceTest {
                 () -> service.createProject("123456789101112131415116171819202122232425262728293031323435363738394041424344454647484950515253545556575859606162636465666768697071727374757677787980818283848586878889909192939495969798991001011021031", "")
         );
 
-        assertThat(exception.getStatusCode())
-                .isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
 
         verifyNoInteractions(projects, documents, mapper);
     }
@@ -133,12 +123,28 @@ class DefaultProjectServiceTest {
                 () -> service.createProject("Testprojekt", "a".repeat(2001))
         );
 
-        assertThat(exception.getStatusCode())
-                .isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(exception.getReason())
-                .isEqualTo("Project description must not exceed 2000 characters");
+        assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(exception.getReason()).isEqualTo("Project description must not exceed 2000 characters");
 
         verifyNoInteractions(projects, documents, mapper);
+    }
+
+    @Test
+    void createProjectAcceptsLimitLengthNameAndDescription() {
+        ProjectEntity saved = new ProjectEntity("a".repeat(200), "a".repeat(2000));
+        Project expected = new Project(1L, "a".repeat(200), "a".repeat(2000));
+
+        when(projects.save(any(ProjectEntity.class))).thenReturn(saved);
+        when(mapper.toProject(saved)).thenReturn(expected);
+
+        Project result = service.createProject("a".repeat(200), "a".repeat(2000));
+
+        ArgumentCaptor<ProjectEntity> captor = ArgumentCaptor.forClass(ProjectEntity.class);
+        verify(projects).save(captor.capture());
+
+        assertThat(captor.getValue().getName()).isEqualTo("a".repeat(200));
+        assertThat(captor.getValue().getDescription()).isEqualTo("a".repeat(2000));
+        assertThat(result).isEqualTo(expected);
     }
 
     @Test
@@ -184,46 +190,49 @@ class DefaultProjectServiceTest {
         assertThat(result).isEqualTo(expected);
     }
 
-    @Test
-    void createDocumentRejectsNullTitle() {
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"   ", "\t", "\n"})
+    //Testen null, "", "  " und umbruch in ""
+    void createDocumentRejectsBlankTitle(String title) {
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> service.createDocument(null)
+                () -> service.createDocument(title)
         );
 
-        assertThat(exception.getStatusCode())
-                .isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(exception.getReason())
-                .isEqualTo("Document title must not be blank");
+        assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(exception.getReason()).isEqualTo("Document title must not be blank");
 
         verifyNoInteractions(projects, documents, mapper);
     }
 
     @Test
-    void createDocumentRejectsBlankTitle() {
+    void createDocumentRejectsTitleLongerThan255Characters() {
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> service.createDocument("")
+                () -> service.createDocument("a".repeat(256))
         );
 
-        assertThat(exception.getStatusCode())
-                .isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(exception.getReason())
-                .isEqualTo("Document title must not be blank");
+        assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(exception.getReason()).isEqualTo("Document title must not exceed 255 characters");
 
         verifyNoInteractions(projects, documents, mapper);
     }
 
     @Test
-    void createDocumentRejectsTitleLongerThan2000Characters() {
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> service.createDocument("a".repeat(2001))
-        );
+    void createDocumentAcceptsTitleWith255Characters() {
+        DocumentEntity saved = new DocumentEntity("a".repeat(255));
+        Document expected = new Document(10L, "a".repeat(255), null);
 
-        assertThat(exception.getStatusCode())
-                .isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(exception.getReason())
-                .isEqualTo("Document title must not exceed 255 characters");
+        when(documents.save(any(DocumentEntity.class))).thenReturn(saved);
+        when(mapper.toDocument(saved)).thenReturn(expected);
 
-        verifyNoInteractions(projects, documents, mapper);
+        Document result = service.createDocument("a".repeat(255));
+
+        ArgumentCaptor<DocumentEntity> captor = ArgumentCaptor.forClass(DocumentEntity.class);
+        verify(documents).save(captor.capture());
+
+        assertThat(captor.getValue().getTitle()).isEqualTo("a".repeat(255));
+        assertThat(captor.getValue().getProject()).isNull();
+        assertThat(result).isEqualTo(expected);
     }
 
     @Test
@@ -285,8 +294,7 @@ class DefaultProjectServiceTest {
     void assignDocumentThrowsNotFoundWhenProjectDoesNotExist() {
         when(projects.findById(1L)).thenReturn(Optional.empty());
 
-        ResponseStatusException exception = catchThrowableOfType(
-                ResponseStatusException.class,
+        ResponseStatusException exception = catchThrowableOfType(ResponseStatusException.class,
                 () -> service.assignDocument(1L, 10L));
 
         assertThat(exception).isNotNull();
@@ -302,8 +310,7 @@ class DefaultProjectServiceTest {
         when(projects.findById(1L)).thenReturn(Optional.of(project));
         when(documents.findById(10L)).thenReturn(Optional.empty());
 
-        ResponseStatusException exception = catchThrowableOfType(
-                ResponseStatusException.class,
+        ResponseStatusException exception = catchThrowableOfType(ResponseStatusException.class,
                 () -> service.assignDocument(1L, 10L));
 
         assertThat(exception).isNotNull();
@@ -317,15 +324,12 @@ class DefaultProjectServiceTest {
     @ParameterizedTest
     @CsvSource(value = {"null, 1", "0, 1", "-1, 1", "1, null", "1, 0", "1, -1"}, nullValues = "null")
     void assignDocumentRejectsInvalidIds(Long projectId, Long documentId) {
-        ResponseStatusException exception = assertThrows(
-                ResponseStatusException.class,
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
                 () -> service.assignDocument(projectId, documentId)
         );
 
-        assertThat(exception.getStatusCode())
-                .isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(exception.getReason())
-                .isEqualTo("IDs must be positive");
+        assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(exception.getReason()).isEqualTo("IDs must be positive");
 
         verifyNoInteractions(projects, documents, mapper);
     }
@@ -361,8 +365,7 @@ class DefaultProjectServiceTest {
     void listDocumentsInProjectThrowsNotFoundWhenProjectDoesNotExist() {
         when(projects.existsById(1L)).thenReturn(false);
 
-        ResponseStatusException exception = catchThrowableOfType(
-                ResponseStatusException.class,
+        ResponseStatusException exception = catchThrowableOfType(ResponseStatusException.class,
                 () -> service.listDocumentsInProject(1L));
 
         assertThat(exception).isNotNull();
@@ -372,33 +375,27 @@ class DefaultProjectServiceTest {
     }
 
     @ParameterizedTest
-    @CsvSource(value = {"null, -1"}, nullValues = "null")
+    @CsvSource(value = {"null", "-1", "0"}, nullValues = "null")
     void listDocumentsInProjectRejectsInvalidIds(Long projectId) {
-        ResponseStatusException exception = assertThrows(
-                ResponseStatusException.class,
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
                 () -> service.listDocumentsInProject(projectId)
         );
 
-        assertThat(exception.getStatusCode())
-                .isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(exception.getReason())
-                .isEqualTo("Project id must be positive");
+        assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(exception.getReason()).isEqualTo("Project id must be positive");
 
         verifyNoInteractions(projects, documents, mapper);
     }
 
     @ParameterizedTest
-    @CsvSource(value = {"null, -1"}, nullValues = "null")
+    @CsvSource(value = {"null", "-1", "0"}, nullValues = "null")
     void GetDocumentRejectsInvalidIds(Long documentId) {
-        ResponseStatusException exception = assertThrows(
-                ResponseStatusException.class,
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
                 () -> service.getDocument(documentId)
         );
 
-        assertThat(exception.getStatusCode())
-                .isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(exception.getReason())
-                .isEqualTo("Document id must be positive");
+        assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(exception.getReason()).isEqualTo("Document id must be positive");
 
         verifyNoInteractions(projects, documents, mapper);
     }

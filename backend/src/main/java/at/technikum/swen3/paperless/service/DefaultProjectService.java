@@ -50,12 +50,13 @@ public class DefaultProjectService implements ProjectService {
         String cleanDescription = description == null ? "" : description.strip();
 
         if (cleanDescription.length() > 2000) {
+            logger.debug("Creating project failed, cause: description too long, length={}", cleanDescription.length());
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Project description must not exceed 2000 characters");
         }
 
         ProjectEntity newProject = projects.save(new ProjectEntity(cleanName, cleanDescription));
 
-        logger.info("Created project :{}, description: {}", newProject.getName(), newProject.getDescription());
+        logger.info("Created project :{}, description: {}, id: {}", newProject.getName(), newProject.getDescription(), newProject.getId());
 
         return mapper.toProject(newProject);
     }
@@ -84,7 +85,7 @@ public class DefaultProjectService implements ProjectService {
 
         DocumentEntity newDocument = documents.save(new DocumentEntity(cleanTitle));
 
-        logger.info("Created document {}", newDocument.getTitle());
+        logger.info("Created document {} with id: {}", newDocument.getTitle(), newDocument.getId());
 
         return mapper.toDocument(newDocument);
     }
@@ -93,14 +94,20 @@ public class DefaultProjectService implements ProjectService {
     @Transactional
     public Document assignDocument(Long projectId, Long documentId) {
         if (projectId == null || projectId <= 0 || documentId == null || documentId <= 0) {
-            logger.debug("Assigning document failed, cause: project or document id must not be null");
+            logger.debug("Assigning document failed, cause: project or document id must be positive, got: projectId: {}, documentId: {}", projectId, documentId);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "IDs must be positive");
         }
 
         ProjectEntity project = projects.findById(projectId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+                .orElseThrow(() -> {
+                    logger.debug("Assigning document failed: projectId={} not found, documentId={}", projectId, documentId);
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found");
+                });
         DocumentEntity document = documents.findById(documentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
+                .orElseThrow(() ->  {
+                    logger.debug("Assigning document failed: documentId={} not found, projectId={}", documentId, projectId);
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found");
+                });
         // Assigning again is safe; assigning to another project moves the document.
         document.assignTo(project);
 
@@ -122,12 +129,15 @@ public class DefaultProjectService implements ProjectService {
     @Override
     public Document getDocument(Long documentId) {
         if (documentId == null || documentId <= 0) {
-            logger.debug("Getting document failed, cause: document id must not be null");
+            logger.debug("Getting document failed, cause: document id must be positive, got id: {}", documentId);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Document id must be positive");
         }
 
         Document documentGet = documents.findById(documentId).map(mapper::toDocument)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
+                .orElseThrow(() -> {
+                    logger.debug("Getting document failed, cause: document id not found, got id: {}", documentId);
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found");
+                });
 
         logger.debug("Fetched documentId={}", documentId);
         return documentGet;
@@ -136,7 +146,7 @@ public class DefaultProjectService implements ProjectService {
     @Override
     public List<Document> listDocumentsInProject(Long projectId) {
         if (projectId == null || projectId <= 0) {
-            logger.debug("listing documents failed, cause: project id must not be null");
+            logger.debug("listing documents failed, cause: project id must be positive, got={}", projectId);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Project id must be positive");
         }
 
