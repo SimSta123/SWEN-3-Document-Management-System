@@ -123,7 +123,7 @@ public class DefaultProjectService implements ProjectService {
     public Document getDocument(Long documentId) {
         if (documentId == null || documentId <= 0) {
             logger.debug("Getting document failed, cause: document id must not be null");
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Document ID must be positive");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Document id must be positive");
         }
 
         Document documentGet = documents.findById(documentId).map(mapper::toDocument)
@@ -137,7 +137,7 @@ public class DefaultProjectService implements ProjectService {
     public List<Document> listDocumentsInProject(Long projectId) {
         if (projectId == null || projectId <= 0) {
             logger.debug("listing documents failed, cause: project id must not be null");
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Project ID must be positive");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Project id must be positive");
         }
 
         if (!projects.existsById(projectId)) {

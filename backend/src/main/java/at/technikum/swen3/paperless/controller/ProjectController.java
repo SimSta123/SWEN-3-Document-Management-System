@@ -94,7 +94,7 @@ public class ProjectController {
     }
 
     @GetMapping("/projects/{projectId}/documents")
-    public List<Document> listDocuments(@PathVariable Long projectId, HttpServletRequest httpRequest) {
+    public List<Document> listDocumentsInProject(@PathVariable Long projectId, HttpServletRequest httpRequest) {
         logger.info("Request: method={} path={} remoteAddress={}, requesting to get all documents of project with id: {}",
                 httpRequest.getMethod(),
                 httpRequest.getRequestURI(),
