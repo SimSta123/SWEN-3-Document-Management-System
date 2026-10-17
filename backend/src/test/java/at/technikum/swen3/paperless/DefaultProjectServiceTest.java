@@ -226,7 +226,7 @@ class DefaultProjectServiceTest {
         when(mapper.toDocument(first)).thenReturn(firstResult);
         when(mapper.toDocument(second)).thenReturn(secondResult);
 
-        assertThat(service.listDocuments(1L)).containsExactly(firstResult, secondResult);
+        assertThat(service.listDocumentsInProject(1L)).containsExactly(firstResult, secondResult);
 
         verify(documents).findByProjectIdOrderByIdAsc(1L);
     }
@@ -236,7 +236,7 @@ class DefaultProjectServiceTest {
         when(projects.existsById(1L)).thenReturn(true);
         when(documents.findByProjectIdOrderByIdAsc(1L)).thenReturn(List.of());
 
-        assertThat(service.listDocuments(1L)).isEmpty();
+        assertThat(service.listDocumentsInProject(1L)).isEmpty();
 
         verifyNoInteractions(mapper);
     }
@@ -247,7 +247,7 @@ class DefaultProjectServiceTest {
 
         ResponseStatusException exception = catchThrowableOfType(
                 ResponseStatusException.class,
-                () -> service.listDocuments(1L));
+                () -> service.listDocumentsInProject(1L));
 
         assertThat(exception).isNotNull();
         assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);

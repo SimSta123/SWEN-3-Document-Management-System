@@ -11,5 +11,5 @@ public interface ProjectService {
     List<Document> listAllDocuments();
     Document getDocument(Long documentId);
     Document assignDocument(Long projectId, Long documentId);
-    List<Document> listDocuments(Long projectId);
+    List<Document> listDocumentsInProject(Long projectId);
 }
