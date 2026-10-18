@@ -73,7 +73,7 @@ Our [request examples](requests/projects.http) cover this flow. We use the retur
 | PUT | `/projects/{projectId}/documents/{documentId}` | Assign or move a document |
 | GET | `/projects/{projectId}/documents` | List a project's documents |
 
-We also keep a small database example at `/one` and [health requests](requests/health.http) for checking the backend and database connection.
+Our [health requests](requests/health.http) check the backend and database connection.
 
 ## Tests
 
@@ -83,7 +83,7 @@ Our Spring Boot tests use HTTP and an H2 database to check startup, health, docu
 
 The Docker build runs our tests. With JDK 25 installed, we can also run `./mvnw verify` from `backend/`, or `.\mvnw.cmd verify` on Windows. JaCoCo writes the coverage report to `backend/target/site/jacoco/index.html`.
 
-On 17 October 2026, all 49 tests passed at [commit f23010e](https://github.com/SimSta123/SWEN-3-Document-Management-System/commit/f23010e), with 83.14% line coverage and 95% branch coverage. This includes unit and integration tests. We rerun the checks after code changes.
+On 18 October 2026, all 47 tests passed, with 83.33% line coverage and 95% branch coverage. This includes unit and integration tests. We rerun the checks after code changes.
 
 Our [CI workflow](.github/workflows/ci.yml) runs backend tests and Compose checks. The midterm branch has no direct push trigger, so we run its checks locally too.
 
