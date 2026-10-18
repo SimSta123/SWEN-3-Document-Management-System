@@ -1,21 +1,42 @@
 # SWEN3 Document Management System
 
-Software Engineering 3 Labor, WS 2026 — Group G
+Software Engineering 3 Labor, WS 2026, Group G
 Yann Polini and Simon Stangelberger
 
-[Kanban board](https://github.com/users/YannPolini/projects/4) · [Sprint milestones](https://github.com/SimSta123/SWEN-3-Document-Management-System/milestones) · [Working together](CONTRIBUTING.md)
+[Repository](https://github.com/SimSta123/SWEN-3-Document-Management-System) | [Kanban board](https://github.com/users/YannPolini/projects/4) | [Milestones](https://github.com/SimSta123/SWEN-3-Document-Management-System/milestones)
 
-We are building a document management system as our semester project. The aim is to upload and organise documents, with text recognition, search and AI summaries added during the later sprints.
+We are building a document management system as our semester project. We currently save document titles, list them on a dashboard and show their details. Our additional use case is organising documents into projects. A document can belong to one project at a time, and assigning it to another project moves it there.
 
-## Sprint 1
+We use `mid-term-code-review` for the midterm work and keep Sprint 3 separate on `sprint-3`. File uploads, queue processing, OCR and search are later work.
 
-Our first step was to set up the backend, database and a basic web page. Docker Compose runs the services together, and GitHub Actions runs the build checks.
+## How our project works
 
-We added a small database example to follow a request through the controller, service and repository. `GET /one` reads a message from PostgreSQL, while `GET /one/i` returns a fixed response.
+We use HTML, CSS and JavaScript for the website, nginx for the web server, Java 25 with Spring Boot 4.1.1 for the backend, and PostgreSQL 17 for storage. We build the backend with Maven.
 
-Our additional use case is organising documents into projects. We can create projects with a name and description, create document records with a title, and assign them to a project. A project can contain several documents. Each document can belong to one project at a time, and assigning it to another project moves it there.
+```mermaid
+flowchart LR
+    Browser[Browser] --> Web[nginx]
+    subgraph Backend[Spring Boot backend]
+        Controller[ProjectController] --> Service[DefaultProjectService]
+        Service --> Repository[JPA repositories]
+        Service --> Mapper[MapStruct]
+        Mapper --> Records[Project and Document response records]
+    end
+    Web -->|/api requests| Controller
+    Repository --> Database[(PostgreSQL)]
+```
 
-The records and their relationships are stored in PostgreSQL. Flyway creates the tables, JPA repositories handle database access, and MapStruct converts database entities into the records returned by the API. For now, this feature stores document titles and project membership. File uploads and the project interface are still to come.
+When we save a title, the request goes through nginx to `ProjectController`. It calls `ProjectService`, implemented by `DefaultProjectService`. The service validates and saves a `DocumentEntity`. MapStruct converts it into the `Document` record returned as JSON.
+
+We made these choices:
+
+- We separate request handling, business logic and database access. The service interface lets us test business logic separately.
+- We use Spring to inject the service, repositories, mapper and logger through constructors.
+- We use Spring Data JPA for persistence. Flyway creates the schema, and Hibernate checks it against our entities.
+- We use MapStruct to keep database entities separate from the records returned by the API.
+- We use nginx to serve the website and forward API requests. It removes `/api/` before forwarding them to the backend.
+
+The main code is in [controllers](backend/src/main/java/at/technikum/swen3/paperless/controller), [services](backend/src/main/java/at/technikum/swen3/paperless/service), [entities](backend/src/main/java/at/technikum/swen3/paperless/model), [repositories](backend/src/main/java/at/technikum/swen3/paperless/repository) and [migrations](backend/src/main/resources/db/migration).
 
 ## Run the project
 
@@ -30,21 +51,17 @@ You need Docker Desktop with Linux containers enabled.
 
 3. Open [localhost](http://localhost/) for the website. The API uses [localhost:8081](http://localhost:8081) by default.
 
-The default ports are 80 for the web page and 8081 for the API. If needed, change `WEB_PORT` and `API_PORT` in `.env`. PostgreSQL is reachable by the backend inside Docker; it does not publish a host port.
+We can change the default ports with `WEB_PORT` and `API_PORT` in `.env`. PostgreSQL is only reachable inside Docker.
 
-Stop the services with `docker compose down`. The database volume is kept. Keep `.env` out of Git. Changing its password does not change the password in an existing database volume.
+We stop the services with `docker compose down`, which keeps the database volume. We keep `.env` out of Git. Changing its password does not update an existing database volume.
 
-## Sprint 2 website
+## Website and API
 
-The dashboard lists saved documents under their projects. You can collapse each project, and documents without a project appear under Unassigned. Add a document by entering a title, then click it to see its title, ID and project. Titles must not be blank or longer than 255 characters. Refreshing loads the saved records again. The pages show a message when the library is empty, a request fails or a document is missing.
+Our [dashboard](frontend/public/index.html) groups documents by project, including Unassigned. We can add a title and open the [detail page](frontend/public/document.html) to see its title, ID and project. We show messages for empty lists, failed requests and missing documents.
 
-The website sends requests through nginx at `/api/`. nginx removes that prefix before passing the request to the backend. The frontend runs in its own Docker container. For now, we save document titles and project links; file uploads come later.
+We validate document titles in the website, validate REST request fields and check inputs again in the business service. We reject blank names/titles, values above our length limits and invalid IDs. Missing records return 404. Our controller logs requests, and the service logs operations and rejected inputs. We enable service DEBUG logs in [application.properties](backend/src/main/resources/application.properties).
 
-We used OpenAI Codex to help build and check the Sprint 2 pages, document reads and server setup. Source links are included in the code.
-
-## Try the API
-
-The [project requests](requests/projects.http) show the workflow: create a project, create a document record, assign it, then list the project's documents. Use the IDs returned by the create requests and adjust the API port if you changed it.
+Our [request examples](requests/projects.http) cover this flow. We use the returned IDs in later requests.
 
 | Method | Endpoint | Action |
 | --- | --- | --- |
@@ -52,20 +69,28 @@ The [project requests](requests/projects.http) show the workflow: create a proje
 | GET | `/projects` | List projects |
 | POST | `/documents` | Create a document record |
 | GET | `/documents` | List all document records, including unassigned ones |
-| GET | `/documents/{documentId}` | Read one document record; unknown IDs return 404 |
+| GET | `/documents/{documentId}` | Read one document record, or return 404 |
 | PUT | `/projects/{projectId}/documents/{documentId}` | Assign or move a document |
 | GET | `/projects/{projectId}/documents` | List a project's documents |
 
-There are also [health requests](requests/health.http) to check the backend and database connection.
+We also keep a small database example at `/one` and [health requests](requests/health.http) for checking the backend and database connection.
 
 ## Tests
 
-The Docker build runs the automated tests. To run them locally with JDK 25, use `./mvnw verify` from `backend/`, or `mvnw.cmd verify` on Windows. The coverage report is generated at `backend/target/site/jacoco/index.html`.
+We use JUnit and Mockito with mocked repositories and mapping to test valid/invalid inputs, length limits, missing records and assignment. These tests do not use our PostgreSQL database.
 
-We currently have 22 tests for the services, startup, document reads and title creation. The read tests include an empty list, documents with and without a project, one document by ID and a missing document. We also checked the website in the browser: validation, saving, project lists, details and refreshing. The remaining Sprint 2 backend tests are a separate task.
+Our Spring Boot tests use HTTP and an H2 database to check startup, health, document creation and reads. We check the website separately in the browser. The earlier main checks covered saving, validation, lists, details and persistence after restarting the PostgreSQL stack.
 
-## Technologies and team workflow
+The Docker build runs our tests. With JDK 25 installed, we can also run `./mvnw verify` from `backend/`, or `.\mvnw.cmd verify` on Windows. JaCoCo writes the coverage report to `backend/target/site/jacoco/index.html`.
 
-We use Java 25, Spring Boot 4.1.1, Maven, PostgreSQL 17, Spring Data JPA, Flyway and MapStruct. The basic frontend uses HTML, CSS and JavaScript served by nginx.
+On 17 October 2026, all 49 tests passed at [commit f23010e](https://github.com/SimSta123/SWEN-3-Document-Management-System/commit/f23010e), with 83.14% line coverage and 95% branch coverage. This includes unit and integration tests. We rerun the checks after code changes.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how we use feature and sprint branches.
+Our [CI workflow](.github/workflows/ci.yml) runs backend tests and Compose checks. The midterm branch has no direct push trigger, so we run its checks locally too.
+
+## Our work and lessons learned
+
+We built the project grouping, website and REST endpoints, then added backend tests, logging and business-layer validation. We track our work on the board. The midterm tasks are [validation #33](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/33), [logging #34](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/34), [tests #35](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/35), [documentation #36](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/36) and [final checks #37](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/37).
+
+We learned that nginx has to remove `/api/`, or the backend receives the wrong path. We also found that frontend and REST validation do not protect direct service calls, so we added business-layer checks. A passing build does not prove enough coverage, so we check the JaCoCo report.
+
+We use separate branches and keep `main` for the checked version. We assign tasks on the board, test our changes and check the whole app before merging. Previous merges are recorded in [pull requests](https://github.com/SimSta123/SWEN-3-Document-Management-System/pulls?q=is%3Apr+is%3Amerged). We both study the whole project for the review.
