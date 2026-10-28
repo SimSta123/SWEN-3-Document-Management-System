@@ -7,7 +7,7 @@ Yann Polini and Simon Stangelberger
 
 We are building a document management system as our semester project. We currently save document titles, list them on a dashboard and show their details. Our additional use case is organising documents into projects. A document can belong to one project at a time, and assigning it to another project moves it there.
 
-We now use `sprint-3` for Sprint 3 and the midterm review. It includes the earlier midterm work and the RabbitMQ setup. We keep `mid-term-code-review` as the old midterm version. PDF upload and queue processing are still being added. Actual OCR and search come in Sprint 4.
+We now use `sprint-3` for Sprint 3 and the midterm review. It includes the earlier midterm work, RabbitMQ and an empty OCR worker. We keep `mid-term-code-review` as the old midterm version. PDF upload and queue publication are still being added. Actual OCR and search come in Sprint 4.
 
 ## How our project works
 
@@ -75,6 +75,26 @@ Our [request examples](requests/projects.http) cover this flow. We use the retur
 
 Our [health requests](requests/health.http) check the backend and database connection.
 
+## Failure handling
+
+The service uses `InvalidInputException` for invalid values and `NotFoundException` for missing records. [ApiExceptionHandler](backend/src/main/java/at/technikum/swen3/paperless/controller/ApiExceptionHandler.java) turns these into 400 and 404 responses. It also handles invalid JSON and invalid request parameters. Errors use a JSON problem response with a status and detail.
+
+We use Spring Data's exceptions for database failures. Data conflicts return 409, unavailable connections and temporary database failures return 503, and other failures return 500. Internal details stay in the logs. The API returns a short message without SQL or connection details.
+
+## OCR worker
+
+The [worker](ocr-worker/src/main/java/at/technikum/swen3/worker/UploadListener.java) runs in its own container. It receives upload messages from RabbitMQ and logs them. It does not read PDFs or run OCR yet.
+
+We use a durable queue called `document.uploaded`. Set `OCR_QUEUE` to change it. The worker declares the queue when it connects. Spring acknowledges each message after the listener returns. Blank messages and invalid UTF-8 are rejected with `InvalidUploadMessageException`. Rejected messages go to the durable `document.uploaded.failed` queue. Other listener failures go there too, so a bad message does not get retried forever. The failed queue has no consumer. We can inspect it in RabbitMQ. Spring reconnects the listener if the broker goes offline.
+
+For #27, the backend can publish to the default exchange (`""`) with the queue name as the routing key. Send a UTF-8 text or JSON message, for example `{"documentId":42}`. The worker logs the body without parsing it, so this example does not fix the final upload message format. Do not send the PDF bytes in this message. If the backend also declares the queue, use the same durable setting and arguments: `x-dead-letter-exchange=""` and `x-dead-letter-routing-key="document.uploaded.failed"`. With another `OCR_QUEUE`, the failed queue is that name plus `.failed`.
+
+The earlier #28 queue had no failed-message settings. RabbitMQ cannot change queue arguments in place. If that queue already exists, use a new `OCR_QUEUE` for testing or drain it before recreating it with these settings. Do not delete queued uploads.
+
+Run `docker compose logs -f ocr-worker` to see received messages. RabbitMQ's management page is at [localhost:15672](http://localhost:15672/), with user `paperless` and the password from `.env`.
+
+The listener follows the [Spring AMQP example](https://docs.spring.io/spring-amqp/reference/amqp/receiving-messages/async-annotation-driven.html) and [exception handling docs](https://docs.spring.io/spring-amqp/reference/amqp/exception-handling.html). We used Codex to help with the worker, failure handling and checks.
+
 ## Tests
 
 We use JUnit and Mockito with mocked repositories and mapping to test valid/invalid inputs, length limits, missing records and assignment. These tests do not use our PostgreSQL database.
@@ -85,7 +105,7 @@ The Docker build runs our tests. With JDK 25 installed, we can also run `./mvnw 
 
 On 18 October 2026, all 47 tests passed, with 83.33% line coverage and 95% branch coverage. This includes unit and integration tests. We rerun the checks after code changes.
 
-Our [CI workflow](.github/workflows/ci.yml) runs backend tests and Compose checks. The midterm branch has no direct push trigger, so we run its checks locally too.
+Our [CI workflow](.github/workflows/ci.yml) runs backend tests and Compose checks. It also sends text and JSON messages to RabbitMQ, checks the worker logs and acknowledgements, and checks that blank and invalid UTF-8 messages reach the failed queue with [this script](scripts/check-ocr-worker.py). To run that check locally on a test stack, set `RABBITMQ_PASSWORD` in your shell to match the stack and run `python scripts/check-ocr-worker.py`. The script uses `OCR_QUEUE` if set and reads messages from the failed queue, so use a separate test stack. The worker build also runs its unit tests. This checks the worker directly. The PDF upload check still needs #27, including handling publication failures in that new code.
 
 ## Our work and lessons learned
 

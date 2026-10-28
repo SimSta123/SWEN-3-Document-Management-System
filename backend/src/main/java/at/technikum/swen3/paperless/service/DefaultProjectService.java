@@ -8,13 +8,12 @@ import at.technikum.swen3.paperless.service.mapping.ProjectMapper;
 import at.technikum.swen3.paperless.service.model.Document;
 import at.technikum.swen3.paperless.service.model.Project;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
+import at.technikum.swen3.paperless.service.exception.InvalidInputException;
+import at.technikum.swen3.paperless.service.exception.NotFoundException;
 import org.slf4j.Logger;
 
-import javax.print.Doc;
 import java.util.List;
 
 @Service
@@ -37,21 +36,21 @@ public class DefaultProjectService implements ProjectService {
     public Project createProject(String name, String description) {
         if (name == null || name.isBlank()) {
             logger.debug("Creating project failed, cause: empty name");
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Project name must not be blank");
+            throw new InvalidInputException("Project name must not be blank");
         }
 
         String cleanName = name.strip();
 
         if (cleanName.length() > 200) {
             logger.debug("Creating project failed, cause: name too long");
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Project name must not exceed 200 characters");
+            throw new InvalidInputException("Project name must not exceed 200 characters");
         }
 
         String cleanDescription = description == null ? "" : description.strip();
 
         if (cleanDescription.length() > 2000) {
             logger.debug("Creating project failed, cause: description too long, length={}", cleanDescription.length());
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Project description must not exceed 2000 characters");
+            throw new InvalidInputException("Project description must not exceed 2000 characters");
         }
 
         ProjectEntity newProject = projects.save(new ProjectEntity(cleanName, cleanDescription));
@@ -73,14 +72,14 @@ public class DefaultProjectService implements ProjectService {
     public Document createDocument(String title) {
         if (title == null || title.isBlank()) {
             logger.debug("Creating document failed, cause: empty title");
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Document title must not be blank");
+            throw new InvalidInputException("Document title must not be blank");
         }
 
         String cleanTitle = title.strip();
 
         if (cleanTitle.length() > 255) {
             logger.debug("Creating document failed, cause: title too long");
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Document title must not exceed 255 characters");
+            throw new InvalidInputException("Document title must not exceed 255 characters");
         }
 
         DocumentEntity newDocument = documents.save(new DocumentEntity(cleanTitle));
@@ -95,18 +94,18 @@ public class DefaultProjectService implements ProjectService {
     public Document assignDocument(Long projectId, Long documentId) {
         if (projectId == null || projectId <= 0 || documentId == null || documentId <= 0) {
             logger.debug("Assigning document failed, cause: project or document id must be positive, got: projectId: {}, documentId: {}", projectId, documentId);
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "IDs must be positive");
+            throw new InvalidInputException("IDs must be positive");
         }
 
         ProjectEntity project = projects.findById(projectId)
                 .orElseThrow(() -> {
                     logger.debug("Assigning document failed: projectId={} not found, documentId={}", projectId, documentId);
-                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found");
+                    return new NotFoundException("Project not found");
                 });
         DocumentEntity document = documents.findById(documentId)
                 .orElseThrow(() ->  {
                     logger.debug("Assigning document failed: documentId={} not found, projectId={}", documentId, projectId);
-                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found");
+                    return new NotFoundException("Document not found");
                 });
         // Assigning again is safe; assigning to another project moves the document.
         document.assignTo(project);
@@ -130,13 +129,13 @@ public class DefaultProjectService implements ProjectService {
     public Document getDocument(Long documentId) {
         if (documentId == null || documentId <= 0) {
             logger.debug("Getting document failed, cause: document id must be positive, got id: {}", documentId);
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Document id must be positive");
+            throw new InvalidInputException("Document id must be positive");
         }
 
         Document documentGet = documents.findById(documentId).map(mapper::toDocument)
                 .orElseThrow(() -> {
                     logger.debug("Getting document failed, cause: document id not found, got id: {}", documentId);
-                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found");
+                    return new NotFoundException("Document not found");
                 });
 
         logger.debug("Fetched documentId={}", documentId);
@@ -147,12 +146,12 @@ public class DefaultProjectService implements ProjectService {
     public List<Document> listDocumentsInProject(Long projectId) {
         if (projectId == null || projectId <= 0) {
             logger.debug("listing documents failed, cause: project id must be positive, got={}", projectId);
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Project id must be positive");
+            throw new InvalidInputException("Project id must be positive");
         }
 
         if (!projects.existsById(projectId)) {
             logger.debug("listing documents failed, cause: project not found");
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found");
+            throw new NotFoundException("Project not found");
         }
 
         List<Document> documentsList = documents.findByProjectIdOrderByIdAsc(projectId).stream().map(mapper::toDocument).toList();
