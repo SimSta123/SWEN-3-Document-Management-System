@@ -33,6 +33,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+
 @ExtendWith(MockitoExtension.class)
 class DefaultProjectServiceTest {
 
@@ -53,7 +55,7 @@ class DefaultProjectServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DefaultProjectService(projects, documents, mapper, logger);
+        service = new DefaultProjectService(projects, documents, mapper, logger, mock(RabbitTemplate.class), "document.uploaded");
     }
 
     @Test

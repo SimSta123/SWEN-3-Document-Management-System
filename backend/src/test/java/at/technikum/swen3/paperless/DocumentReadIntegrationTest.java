@@ -18,6 +18,9 @@ import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
 // Check controller, service, mapper and persistence together using real HTTP.
 // https://docs.spring.io/spring-boot/reference/testing/spring-boot-applications.html
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -33,6 +36,9 @@ class DocumentReadIntegrationTest {
         documents.deleteAll();
         projects.deleteAll();
     }
+
+    @MockitoBean
+    private RabbitTemplate rabbit;
 
     private HttpResponse<String> request(String method, String path, String body) throws Exception {
         try (HttpClient client = HttpClient.newHttpClient()) {

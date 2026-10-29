@@ -16,6 +16,9 @@ import org.slf4j.Logger;
 
 import java.util.List;
 
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
+
 @Service
 @Transactional(readOnly = true)
 public class DefaultProjectService implements ProjectService {
@@ -23,12 +26,18 @@ public class DefaultProjectService implements ProjectService {
     private final DocumentRepository documents;
     private final ProjectMapper mapper;
     private final Logger logger;
+    private final RabbitTemplate rabbit;
+    private final String uploadQueue;
 
-    public DefaultProjectService(ProjectRepository projects, DocumentRepository documents, ProjectMapper mapper, Logger logger) {
+
+    public DefaultProjectService(ProjectRepository projects, DocumentRepository documents, ProjectMapper mapper, Logger logger,
+                                 RabbitTemplate rabbit, @Value("${paperless.ocr.queue}") String uploadQueue) {
         this.projects = projects;
         this.documents = documents;
         this.mapper = mapper;
         this.logger = logger;
+        this.rabbit = rabbit;
+        this.uploadQueue = uploadQueue;
     }
 
     @Override
@@ -83,6 +92,8 @@ public class DefaultProjectService implements ProjectService {
         }
 
         DocumentEntity newDocument = documents.save(new DocumentEntity(cleanTitle));
+
+        rabbit.convertAndSend(uploadQueue, "Document created: " + newDocument.getId());
 
         logger.info("Created document {} with id: {}", newDocument.getTitle(), newDocument.getId());
 

@@ -37,6 +37,10 @@ services:
       DB_URL: jdbc:postgresql://database:5432/paperless
       DB_USER: paperless
       DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: paperless
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
+      OCR_QUEUE: ${OCR_QUEUE:-document.uploaded}
     ports:
       - "127.0.0.1:${API_PORT:-8081}:8081"
     depends_on:

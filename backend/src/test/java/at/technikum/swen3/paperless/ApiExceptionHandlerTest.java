@@ -27,6 +27,8 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+
 class ApiExceptionHandlerTest {
     private DocumentRepository documents;
     private MockMvc mvc;
@@ -35,7 +37,7 @@ class ApiExceptionHandlerTest {
     void setUp() {
         documents = mock(DocumentRepository.class);
         Logger logger = mock(Logger.class);
-        var service = new DefaultProjectService(mock(ProjectRepository.class), documents, mock(ProjectMapper.class), logger);
+        var service = new DefaultProjectService(mock(ProjectRepository.class), documents, mock(ProjectMapper.class), logger, mock(RabbitTemplate.class), "document.uploaded");
         mvc = MockMvcBuilders.standaloneSetup(new ProjectController(service, logger))
                 .setControllerAdvice(new ApiExceptionHandler(logger)).build();
     }
