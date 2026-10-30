@@ -1,6 +1,7 @@
 package at.technikum.swen3.paperless.controller;
 
 
+import at.technikum.swen3.paperless.service.DocumentService;
 import at.technikum.swen3.paperless.service.ProjectService;
 import at.technikum.swen3.paperless.service.mapping.ProjectMapper;
 import at.technikum.swen3.paperless.service.model.Document;
@@ -17,9 +18,9 @@ import java.util.List;
 
 @RestController
 public class DocumentController {
-    private final ProjectService service;
+    private final DocumentService service;
 
-    public DocumentController(ProjectService service) {
+    public DocumentController(DocumentService service) {
         this.service = service;
     }
 

@@ -5,7 +5,9 @@ import at.technikum.swen3.paperless.controller.DocumentController;
 import at.technikum.swen3.paperless.controller.ProjectController;
 import at.technikum.swen3.paperless.repository.DocumentRepository;
 import at.technikum.swen3.paperless.repository.ProjectRepository;
+import at.technikum.swen3.paperless.service.DefaultDocumentService;
 import at.technikum.swen3.paperless.service.DefaultProjectService;
+import at.technikum.swen3.paperless.service.DocumentService;
 import at.technikum.swen3.paperless.service.mapping.ProjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,9 +45,10 @@ class ApiExceptionHandlerTest {
         documents = mock(DocumentRepository.class);
         Logger logger = mock(Logger.class);
         var service = new DefaultProjectService(mock(ProjectRepository.class), documents, mock(ProjectMapper.class), logger, publisher);
+        var docService =  new DefaultDocumentService(documents, mock(ProjectMapper.class), logger, publisher);
         mvc = MockMvcBuilders.standaloneSetup(
                         new ProjectController(service),
-                        new DocumentController(service))
+                        new DocumentController(docService))
                 .setControllerAdvice(new ApiExceptionHandler(logger))
                 .build();
     }

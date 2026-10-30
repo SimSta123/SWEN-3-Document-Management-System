@@ -2,6 +2,7 @@ package at.technikum.swen3.paperless;
 
 import at.technikum.swen3.paperless.repository.DocumentRepository;
 import at.technikum.swen3.paperless.repository.ProjectRepository;
+import at.technikum.swen3.paperless.service.DocumentService;
 import at.technikum.swen3.paperless.service.ProjectService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 class DocumentReadIntegrationTest {
     @LocalServerPort private int port;
     @Autowired private ProjectService service;
+    @Autowired private DocumentService docService;
     @Autowired private DocumentRepository documents;
     @Autowired private ProjectRepository projects;
 
@@ -54,8 +56,8 @@ class DocumentReadIntegrationTest {
 
     @Test
     void listIncludesAssignedAndUnassignedDocuments() throws Exception {
-        var unassigned = service.createDocument("Unassigned notes");
-        var assigned = service.createDocument("Project notes");
+        var unassigned = docService.createDocument("Unassigned notes");
+        var assigned = docService.createDocument("Project notes");
         var project = service.createProject("University", "");
         service.assignDocument(project.id(), assigned.id());
         var response = request("GET", "/documents", null);
@@ -74,7 +76,7 @@ class DocumentReadIntegrationTest {
 
     @Test
     void detailReturnsSelectedRecordAndProject() throws Exception {
-        var document = service.createDocument("Selected document");
+        var document = docService.createDocument("Selected document");
         var project = service.createProject("Course", "");
         service.assignDocument(project.id(), document.id());
         var response = request("GET", "/documents/" + document.id(), null);

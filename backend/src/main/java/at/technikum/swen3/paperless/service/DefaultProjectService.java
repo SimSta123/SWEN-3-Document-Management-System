@@ -17,9 +17,6 @@ import org.slf4j.Logger;
 
 import java.util.List;
 
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.beans.factory.annotation.Value;
-
 @Service
 @Transactional(readOnly = true)
 public class DefaultProjectService implements ProjectService {
@@ -27,14 +24,12 @@ public class DefaultProjectService implements ProjectService {
     private final DocumentRepository documents;
     private final ProjectMapper mapper;
     private final Logger logger;
-    private final DocumentEventPublisher eventPublisher;
 
     public DefaultProjectService(ProjectRepository projects, DocumentRepository documents, ProjectMapper mapper, Logger logger, DocumentEventPublisher eventPublisher) {
         this.projects = projects;
         this.documents = documents;
         this.mapper = mapper;
         this.logger = logger;
-        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -73,6 +68,7 @@ public class DefaultProjectService implements ProjectService {
         return projectList;
     }
 
+    /*
     @Override
     @Transactional
     public Document createDocument(String title) {
@@ -96,6 +92,7 @@ public class DefaultProjectService implements ProjectService {
 
         return mapper.toDocument(newDocument);
     }
+     */
 
     @Override
     @Transactional
@@ -126,6 +123,7 @@ public class DefaultProjectService implements ProjectService {
 
     }
 
+    /*
     @Override
     public List<Document> listAllDocuments() {
         List<Document> documentList = documents.findAll(Sort.by("id")).stream().map(mapper::toDocument).toList();
@@ -149,6 +147,8 @@ public class DefaultProjectService implements ProjectService {
         logger.debug("Fetched documentId={}", documentId);
         return documentGet;
     }
+     */
+
 
     @Override
     public List<Document> listDocumentsInProject(Long projectId) {
