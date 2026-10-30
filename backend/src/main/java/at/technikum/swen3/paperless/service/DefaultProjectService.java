@@ -2,6 +2,7 @@ package at.technikum.swen3.paperless.service;
 
 import at.technikum.swen3.paperless.model.DocumentEntity;
 import at.technikum.swen3.paperless.model.ProjectEntity;
+import at.technikum.swen3.paperless.rabbitMQ.DocumentEventPublisher;
 import at.technikum.swen3.paperless.repository.DocumentRepository;
 import at.technikum.swen3.paperless.repository.ProjectRepository;
 import at.technikum.swen3.paperless.service.mapping.ProjectMapper;
@@ -26,18 +27,14 @@ public class DefaultProjectService implements ProjectService {
     private final DocumentRepository documents;
     private final ProjectMapper mapper;
     private final Logger logger;
-    private final RabbitTemplate rabbit;
-    private final String uploadQueue;
+    private final DocumentEventPublisher eventPublisher;
 
-
-    public DefaultProjectService(ProjectRepository projects, DocumentRepository documents, ProjectMapper mapper, Logger logger,
-                                 RabbitTemplate rabbit, @Value("${paperless.ocr.queue}") String uploadQueue) {
+    public DefaultProjectService(ProjectRepository projects, DocumentRepository documents, ProjectMapper mapper, Logger logger, DocumentEventPublisher eventPublisher) {
         this.projects = projects;
         this.documents = documents;
         this.mapper = mapper;
         this.logger = logger;
-        this.rabbit = rabbit;
-        this.uploadQueue = uploadQueue;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -93,7 +90,7 @@ public class DefaultProjectService implements ProjectService {
 
         DocumentEntity newDocument = documents.save(new DocumentEntity(cleanTitle));
 
-        rabbit.convertAndSend(uploadQueue, "Document created: " + newDocument.getId());
+        eventPublisher.publishDocumentCreated(newDocument.getId());
 
         logger.info("Created document {} with id: {}", newDocument.getTitle(), newDocument.getId());
 

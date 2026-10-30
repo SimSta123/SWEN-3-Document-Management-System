@@ -1,6 +1,7 @@
 package at.technikum.swen3.paperless;
 
 import at.technikum.swen3.paperless.controller.ApiExceptionHandler;
+import at.technikum.swen3.paperless.controller.DocumentController;
 import at.technikum.swen3.paperless.controller.ProjectController;
 import at.technikum.swen3.paperless.repository.DocumentRepository;
 import at.technikum.swen3.paperless.repository.ProjectRepository;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.Mock;
 import org.slf4j.Logger;
 import org.springframework.dao.*;
 import org.springframework.data.domain.Sort;
@@ -28,18 +30,24 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import at.technikum.swen3.paperless.rabbitMQ.DocumentEventPublisher;
 
 class ApiExceptionHandlerTest {
     private DocumentRepository documents;
     private MockMvc mvc;
 
+    DocumentEventPublisher publisher = mock(DocumentEventPublisher.class);
+
     @BeforeEach
     void setUp() {
         documents = mock(DocumentRepository.class);
         Logger logger = mock(Logger.class);
-        var service = new DefaultProjectService(mock(ProjectRepository.class), documents, mock(ProjectMapper.class), logger, mock(RabbitTemplate.class), "document.uploaded");
-        mvc = MockMvcBuilders.standaloneSetup(new ProjectController(service, logger))
-                .setControllerAdvice(new ApiExceptionHandler(logger)).build();
+        var service = new DefaultProjectService(mock(ProjectRepository.class), documents, mock(ProjectMapper.class), logger, publisher);
+        mvc = MockMvcBuilders.standaloneSetup(
+                        new ProjectController(service),
+                        new DocumentController(service))
+                .setControllerAdvice(new ApiExceptionHandler(logger))
+                .build();
     }
 
     @Test
