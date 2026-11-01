@@ -5,9 +5,9 @@ Yann Polini and Simon Stangelberger
 
 [Repository](https://github.com/SimSta123/SWEN-3-Document-Management-System) | [Kanban board](https://github.com/users/YannPolini/projects/4) | [Milestones](https://github.com/SimSta123/SWEN-3-Document-Management-System/milestones)
 
-We are building a document management system as our semester project. We currently save document titles, list them on a dashboard and show their details. Our additional use case is organising documents into projects. A document can belong to one project at a time, and assigning it to another project moves it there.
+This is our document management system for SWEN3. We can save document titles, list them on a dashboard and open their details. We can also post a PDF to the API, which sends a message to the worker. Our additional use case is organising documents into projects. Each document belongs to one project at a time, and assigning it to another project moves it there.
 
-We now use `sprint-3` for Sprint 3 and the midterm review. It includes the earlier midterm work, PDF upload through REST, RabbitMQ and an empty OCR worker. We keep `mid-term-code-review` as the old midterm version. Permanent PDF storage, actual OCR and search come in Sprint 4.
+We use `sprint-3` for the current sprint and midterm review. It includes the earlier midterm work, PDF upload through REST, RabbitMQ and an empty OCR worker. `mid-term-code-review` is the older version. File storage, actual OCR and search come in Sprint 4.
 
 ## How our project works
 
@@ -34,11 +34,11 @@ flowchart LR
 
 When we save a title or upload a PDF, the request goes through nginx to `DocumentController`. It calls `DocumentService`, implemented by `DefaultDocumentService`. The service validates and saves a `DocumentEntity`, then publishes a document-created message to RabbitMQ. MapStruct converts the entity into the `Document` record returned as JSON. Project creation and document assignment use `ProjectController` and `DefaultProjectService`.
 
-We made these choices:
+The main parts are:
 
 - We separate request handling, business logic and database access. The service interface lets us test business logic separately.
 - We use Spring to inject the service, repositories, mapper and logger through constructors.
-- We use Spring Data JPA for persistence. Flyway creates the schema, and Hibernate checks it against our entities.
+- Spring Data JPA handles the database access. Flyway creates the tables, and Hibernate checks that they match our entities.
 - We use MapStruct to keep database entities separate from the records returned by the API.
 - We use nginx to serve the website and forward API requests. It removes `/api/` before forwarding them to the backend.
 
@@ -65,7 +65,7 @@ We stop the services with `docker compose down`, which keeps the database volume
 
 Our [dashboard](frontend/public/index.html) groups documents by project, including Unassigned. We can add a title and open the [detail page](frontend/public/document.html) to see its title, ID and project. We show messages for empty lists, failed requests and missing documents.
 
-We validate document titles in the website, validate REST request fields and check inputs again in the business service. We reject blank names/titles, values above our length limits and invalid IDs. Missing records return 404. Our controller logs requests, and the service logs operations and rejected inputs. We enable service DEBUG logs in [application.properties](backend/src/main/resources/application.properties).
+We check titles in the website and validate requests in the API. The service checks inputs too, so these checks also apply when it is called directly. Blank names or titles, values over the length limits and invalid IDs are rejected. Missing records return 404. The request filter logs requests, and the service logs its operations and rejected inputs. Service DEBUG logging is enabled in [application.properties](backend/src/main/resources/application.properties).
 
 Our [request examples](requests/projects.http) cover this flow. We use the returned IDs in later requests.
 
@@ -83,22 +83,22 @@ Our [health requests](requests/health.http) check the backend and database conne
 
 ### Post a PDF for Sprint 3
 
-Send a multipart request with a `file` part. The optional `title` field overrides the filename. Our chosen file limit is 10 MiB. Empty files and files without a `%PDF-` header return 400. This is a basic signature check, not full PDF parsing.
+Send the PDF as a multipart `file` field. You can also set a `title`, otherwise we use the filename. Files can be up to 10 MiB. Empty files and files without a `%PDF-` header return 400. We only check the header, we do not parse the PDF yet.
 
 ```sh
 curl --fail-with-body -F "file=@/path/to/notes.pdf;type=application/pdf" -F "title=Course notes" http://localhost/api/documents
 docker compose logs --since 1m ocr-worker
 ```
 
-On Windows use `curl.exe` and your PDF's path. The direct backend URL is `http://localhost:8081/documents`, or the port chosen with `API_PORT`. A successful upload returns 201 with the document ID. The worker should log `Received upload for OCR: Document created: <id>` for that ID. The existing frontend still submits JSON titles.
+On Windows use `curl.exe` and replace the file path with your PDF's path. You can also call the backend directly at `http://localhost:8081/documents`, using your `API_PORT` if you changed it. The response should be 201 with the new document ID. Look for `Received upload for OCR: Document created: <id>` in the worker logs. The website still uses the title form.
 
-For Sprint 3, the uploaded PDF is checked and discarded after the request. Only its title is saved. The PDF bytes are not stored or sent to RabbitMQ. Sprint 4 adds permanent storage and OCR. This endpoint implements the PDF POST check on physical page 10 of the original Semester Project PDF.
+For now, we check the uploaded PDF but only save its title. The file is discarded after the request. RabbitMQ gets the document ID in a text message. Saving the actual file and running OCR come in Sprint 4.
 
 ## Failure handling
 
 The service uses `InvalidInputException` for invalid values and `NotFoundException` for missing records. [ApiExceptionHandler](backend/src/main/java/at/technikum/swen3/paperless/controller/ApiExceptionHandler.java) turns these into 400 and 404 responses. It also handles invalid JSON and invalid request parameters. Errors use a JSON problem response with a status and detail.
 
-We use Spring Data's exceptions for database failures. Data conflicts return 409, unavailable connections and temporary database failures return 503, and other failures return 500. Internal details stay in the logs. The API returns a short message without SQL or connection details.
+Database conflicts return 409, unavailable connections and temporary database failures return 503, and other failures return 500. The full error goes in the logs. The API returns a short message without SQL or connection details.
 
 ## OCR worker
 
@@ -106,9 +106,9 @@ The [worker](ocr-worker/src/main/java/at/technikum/swen3/worker/UploadListener.j
 
 We use a durable queue called `document.uploaded`. Set `OCR_QUEUE` to change it. The worker declares the queue when it connects. Spring acknowledges each message after the listener returns. Blank messages and invalid UTF-8 are rejected with `InvalidUploadMessageException`. Rejected messages go to the durable `document.uploaded.failed` queue. Other listener failures go there too, so a bad message does not get retried forever. The failed queue has no consumer. We can inspect it in RabbitMQ. Spring reconnects the listener if the broker goes offline.
 
-The backend publishes `Document created: <id>` to the default exchange (`""`) with the queue name as the routing key. The worker logs the body without parsing it. If the backend also declares the queue, use the same durable setting and arguments: `x-dead-letter-exchange=""` and `x-dead-letter-routing-key="document.uploaded.failed"`. With another `OCR_QUEUE`, the failed queue is that name plus `.failed`.
+The backend sends `Document created: <id>` through the default exchange (`""`), using the queue name as the routing key. The worker just logs the message. The queue uses `x-dead-letter-exchange=""` and `x-dead-letter-routing-key="document.uploaded.failed"`. With another `OCR_QUEUE`, the failed queue is that name plus `.failed`.
 
-The earlier #28 queue had no failed-message settings. RabbitMQ cannot change queue arguments in place. If that queue already exists, use a new `OCR_QUEUE` for testing or drain it before recreating it with these settings. Do not delete queued uploads.
+If you have an older queue without these failed-message settings, RabbitMQ will reject the changed arguments. Use a new `OCR_QUEUE` for testing, or drain the old queue before recreating it. Do not delete queued uploads.
 
 Run `docker compose logs -f ocr-worker` to see received messages. RabbitMQ's management page is at [localhost:15672](http://localhost:15672/), with user `paperless` and the password from `.env`.
 
@@ -118,18 +118,20 @@ The listener follows the [Spring AMQP example](https://docs.spring.io/spring-amq
 
 We use JUnit and Mockito with mocked repositories and mapping to test valid/invalid inputs, length limits, missing records and assignment. These tests do not use our PostgreSQL database.
 
-Our Spring Boot tests use HTTP and an H2 database to check startup, health, document creation and reads. We check the website separately in the browser. The earlier main checks covered saving, validation, lists, details and persistence after restarting the PostgreSQL stack.
+Our Spring Boot tests use real HTTP requests and an H2 database. They cover startup, health, document creation, reads and PDF uploads. RabbitMQ is mocked in these tests. We check the running app separately with PostgreSQL and RabbitMQ.
 
 The Docker build runs our tests. With JDK 25 installed, we can also run `./mvnw verify` from `backend/`, or `.\mvnw.cmd verify` on Windows. JaCoCo writes the coverage report to `backend/target/site/jacoco/index.html`.
 
-On 18 October 2026, all 47 tests passed, with 83.33% line coverage and 95% branch coverage. This includes unit and integration tests. We rerun the checks after code changes.
+On 1 November 2026, all 66 backend tests and 7 worker tests passed. Backend coverage was 93.27% for lines and 93.10% for branches. These figures include unit and HTTP integration tests.
 
-Our [CI workflow](.github/workflows/ci.yml) runs backend tests and Compose checks. It also sends text and JSON messages to RabbitMQ, checks the worker logs and acknowledgements, and checks that blank and invalid UTF-8 messages reach the failed queue with [this script](scripts/check-ocr-worker.py). To run that check locally on a test stack, set `RABBITMQ_PASSWORD` in your shell to match the stack and run `python scripts/check-ocr-worker.py`. The script uses `OCR_QUEUE` if set and reads messages from the failed queue, so use a separate test stack. The worker build also runs its unit tests. Backend HTTP tests cover PDF uploads, filename/custom titles, rejected files and titles, and rollback when publication throws an exception. These tests mock RabbitMQ. Use the PDF POST and worker-log commands above for the live upload check.
+Our [CI workflow](.github/workflows/ci.yml) runs the backend tests and starts the Compose stack. The worker build runs its own unit tests. [The worker check](scripts/check-ocr-worker.py) sends text and JSON messages, checks the logs and acknowledgements, and checks that blank or invalid UTF-8 messages go to the failed queue.
+
+To run the worker check locally, set `RABBITMQ_PASSWORD` in your shell to match the stack and run `python scripts/check-ocr-worker.py`. It uses `OCR_QUEUE` if set. Use a separate test stack because the script reads messages from the failed queue. For the full PDF-to-worker check, use the upload and log commands above.
 
 ## Our work and lessons learned
 
-We built the project grouping, website and REST endpoints, then added backend tests, logging and business-layer validation. We track our work on the board. The midterm tasks are [validation #33](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/33), [logging #34](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/34), [tests #35](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/35), [documentation #36](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/36) and [final checks #37](https://github.com/SimSta123/SWEN-3-Document-Management-System/issues/37).
+We started with the API and project grouping, then added the website, validation, logging and tests. Sprint 3 adds RabbitMQ, the empty worker and the PDF endpoint. Our tasks are on the board linked at the top.
 
-We learned that nginx has to remove `/api/`, or the backend receives the wrong path. We also found that frontend and REST validation do not protect direct service calls, so we added business-layer checks. A passing build does not prove enough coverage, so we check the JaCoCo report.
+One thing we ran into was nginx forwarding the wrong path. Removing `/api/` fixed that. We also had to put validation in the service, since frontend and API validation do not cover direct service calls. For test coverage we check the JaCoCo report as well as the test results.
 
-We use separate branches and keep `main` for the checked version. We assign tasks on the board, test our changes and check the whole app before merging. Previous merges are recorded in [pull requests](https://github.com/SimSta123/SWEN-3-Document-Management-System/pulls?q=is%3Apr+is%3Amerged). We both study the whole project for the review.
+We work on sprint branches and merge into `main` after checking the whole app. Previous merges are in the [pull requests](https://github.com/SimSta123/SWEN-3-Document-Management-System/pulls?q=is%3Apr+is%3Amerged). We both go through the code before the review.

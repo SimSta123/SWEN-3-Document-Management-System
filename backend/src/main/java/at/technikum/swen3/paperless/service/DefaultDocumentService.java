@@ -3,7 +3,6 @@ package at.technikum.swen3.paperless.service;
 import at.technikum.swen3.paperless.model.DocumentEntity;
 import at.technikum.swen3.paperless.rabbitMQ.DocumentEventPublisher;
 import at.technikum.swen3.paperless.repository.DocumentRepository;
-import at.technikum.swen3.paperless.repository.ProjectRepository;
 import at.technikum.swen3.paperless.service.exception.InvalidInputException;
 import at.technikum.swen3.paperless.service.exception.NotFoundException;
 import at.technikum.swen3.paperless.service.mapping.ProjectMapper;

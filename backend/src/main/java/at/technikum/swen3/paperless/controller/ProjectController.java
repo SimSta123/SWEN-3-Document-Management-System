@@ -1,7 +1,6 @@
 package at.technikum.swen3.paperless.controller;
 
 import at.technikum.swen3.paperless.service.ProjectService;
-import at.technikum.swen3.paperless.service.mapping.ProjectMapper;
 import at.technikum.swen3.paperless.service.model.Document;
 import at.technikum.swen3.paperless.service.model.Project;
 import jakarta.validation.Valid;
@@ -41,7 +40,7 @@ public class ProjectController {
 
     @PutMapping("/projects/{projectId}/documents/{documentId}")
     public Document assignDocument(@PathVariable Long projectId, @PathVariable Long documentId, HttpServletRequest httpRequest) {
-        httpRequest.setAttribute("logMessage", "Requesting to requesting to assign document with id: %s to project with id: %s".formatted(documentId, projectId));
+        httpRequest.setAttribute("logMessage", "Requesting to assign document with id: %s to project with id: %s".formatted(documentId, projectId));
 
         return service.assignDocument(projectId, documentId);
     }
