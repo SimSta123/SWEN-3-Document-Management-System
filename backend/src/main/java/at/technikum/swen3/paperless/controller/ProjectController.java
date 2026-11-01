@@ -21,11 +21,7 @@ public class ProjectController {
         this.service = service;
     }
 
-    public record CreateProjectRequest(
-            @NotBlank @Size(max = 200) String name,
-            @Size(max = 2000) String description) {}
-
-    public record CreateDocumentRequest(@NotBlank @Size(max = 255) String title) {}
+    public record CreateProjectRequest(@NotBlank @Size(max = 200) String name, @Size(max = 2000) String description) {}
 
     @PostMapping("/projects")
     @ResponseStatus(HttpStatus.CREATED)
