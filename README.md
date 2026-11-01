@@ -7,7 +7,7 @@ Yann Polini and Simon Stangelberger
 
 We are building a document management system as our semester project. We currently save document titles, list them on a dashboard and show their details. Our additional use case is organising documents into projects. A document can belong to one project at a time, and assigning it to another project moves it there.
 
-We now use `sprint-3` for Sprint 3 and the midterm review. It includes the earlier midterm work, RabbitMQ and an empty OCR worker. We keep `mid-term-code-review` as the old midterm version. PDF upload and queue publication are still being added. Actual OCR and search come in Sprint 4.
+We now use `sprint-3` for Sprint 3 and the midterm review. It includes the earlier midterm work, PDF upload through REST, RabbitMQ and an empty OCR worker. We keep `mid-term-code-review` as the old midterm version. Permanent PDF storage, actual OCR and search come in Sprint 4.
 
 ## How our project works
 
@@ -18,15 +18,21 @@ flowchart LR
     Browser[Browser] --> Web[nginx]
     subgraph Backend[Spring Boot backend]
         Controller[ProjectController] --> Service[DefaultProjectService]
+        DocumentController --> DocumentService[DefaultDocumentService]
+        DocumentService --> Repository
+        DocumentService --> Mapper
+        DocumentService --> Publisher[DocumentEventPublisher]
         Service --> Repository[JPA repositories]
         Service --> Mapper[MapStruct]
         Mapper --> Records[Project and Document response records]
     end
     Web -->|/api requests| Controller
+    Web -->|/api/documents| DocumentController
     Repository --> Database[(PostgreSQL)]
+    Publisher --> RabbitMQ --> Worker[Empty OCR worker]
 ```
 
-When we save a title, the request goes through nginx to `ProjectController`. It calls `ProjectService`, implemented by `DefaultProjectService`. The service validates and saves a `DocumentEntity`. MapStruct converts it into the `Document` record returned as JSON.
+When we save a title or upload a PDF, the request goes through nginx to `DocumentController`. It calls `DocumentService`, implemented by `DefaultDocumentService`. The service validates and saves a `DocumentEntity`, then publishes a document-created message to RabbitMQ. MapStruct converts the entity into the `Document` record returned as JSON. Project creation and document assignment use `ProjectController` and `DefaultProjectService`.
 
 We made these choices:
 
@@ -67,13 +73,26 @@ Our [request examples](requests/projects.http) cover this flow. We use the retur
 | --- | --- | --- |
 | POST | `/projects` | Create a project |
 | GET | `/projects` | List projects |
-| POST | `/documents` | Create a document record |
+| POST | `/documents` | Create a document record from JSON, or accept a multipart PDF upload |
 | GET | `/documents` | List all document records, including unassigned ones |
 | GET | `/documents/{documentId}` | Read one document record, or return 404 |
 | PUT | `/projects/{projectId}/documents/{documentId}` | Assign or move a document |
 | GET | `/projects/{projectId}/documents` | List a project's documents |
 
 Our [health requests](requests/health.http) check the backend and database connection.
+
+### Post a PDF for Sprint 3
+
+Send a multipart request with a `file` part. The optional `title` field overrides the filename. Our chosen file limit is 10 MiB. Empty files and files without a `%PDF-` header return 400. This is a basic signature check, not full PDF parsing.
+
+```sh
+curl --fail-with-body -F "file=@/path/to/notes.pdf;type=application/pdf" -F "title=Course notes" http://localhost/api/documents
+docker compose logs --since 1m ocr-worker
+```
+
+On Windows use `curl.exe` and your PDF's path. The direct backend URL is `http://localhost:8081/documents`, or the port chosen with `API_PORT`. A successful upload returns 201 with the document ID. The worker should log `Received upload for OCR: Document created: <id>` for that ID. The existing frontend still submits JSON titles.
+
+For Sprint 3, the uploaded PDF is checked and discarded after the request. Only its title is saved. The PDF bytes are not stored or sent to RabbitMQ. Sprint 4 adds permanent storage and OCR. This endpoint implements the PDF POST check on physical page 10 of the original Semester Project PDF.
 
 ## Failure handling
 
@@ -87,7 +106,7 @@ The [worker](ocr-worker/src/main/java/at/technikum/swen3/worker/UploadListener.j
 
 We use a durable queue called `document.uploaded`. Set `OCR_QUEUE` to change it. The worker declares the queue when it connects. Spring acknowledges each message after the listener returns. Blank messages and invalid UTF-8 are rejected with `InvalidUploadMessageException`. Rejected messages go to the durable `document.uploaded.failed` queue. Other listener failures go there too, so a bad message does not get retried forever. The failed queue has no consumer. We can inspect it in RabbitMQ. Spring reconnects the listener if the broker goes offline.
 
-For #27, the backend can publish to the default exchange (`""`) with the queue name as the routing key. Send a UTF-8 text or JSON message, for example `{"documentId":42}`. The worker logs the body without parsing it, so this example does not fix the final upload message format. Do not send the PDF bytes in this message. If the backend also declares the queue, use the same durable setting and arguments: `x-dead-letter-exchange=""` and `x-dead-letter-routing-key="document.uploaded.failed"`. With another `OCR_QUEUE`, the failed queue is that name plus `.failed`.
+The backend publishes `Document created: <id>` to the default exchange (`""`) with the queue name as the routing key. The worker logs the body without parsing it. If the backend also declares the queue, use the same durable setting and arguments: `x-dead-letter-exchange=""` and `x-dead-letter-routing-key="document.uploaded.failed"`. With another `OCR_QUEUE`, the failed queue is that name plus `.failed`.
 
 The earlier #28 queue had no failed-message settings. RabbitMQ cannot change queue arguments in place. If that queue already exists, use a new `OCR_QUEUE` for testing or drain it before recreating it with these settings. Do not delete queued uploads.
 
@@ -105,7 +124,7 @@ The Docker build runs our tests. With JDK 25 installed, we can also run `./mvnw 
 
 On 18 October 2026, all 47 tests passed, with 83.33% line coverage and 95% branch coverage. This includes unit and integration tests. We rerun the checks after code changes.
 
-Our [CI workflow](.github/workflows/ci.yml) runs backend tests and Compose checks. It also sends text and JSON messages to RabbitMQ, checks the worker logs and acknowledgements, and checks that blank and invalid UTF-8 messages reach the failed queue with [this script](scripts/check-ocr-worker.py). To run that check locally on a test stack, set `RABBITMQ_PASSWORD` in your shell to match the stack and run `python scripts/check-ocr-worker.py`. The script uses `OCR_QUEUE` if set and reads messages from the failed queue, so use a separate test stack. The worker build also runs its unit tests. This checks the worker directly. The PDF upload check still needs #27, including handling publication failures in that new code.
+Our [CI workflow](.github/workflows/ci.yml) runs backend tests and Compose checks. It also sends text and JSON messages to RabbitMQ, checks the worker logs and acknowledgements, and checks that blank and invalid UTF-8 messages reach the failed queue with [this script](scripts/check-ocr-worker.py). To run that check locally on a test stack, set `RABBITMQ_PASSWORD` in your shell to match the stack and run `python scripts/check-ocr-worker.py`. The script uses `OCR_QUEUE` if set and reads messages from the failed queue, so use a separate test stack. The worker build also runs its unit tests. Backend HTTP tests cover PDF uploads, filename/custom titles, rejected files and titles, and rollback when publication throws an exception. These tests mock RabbitMQ. Use the PDF POST and worker-log commands above for the live upload check.
 
 ## Our work and lessons learned
 
