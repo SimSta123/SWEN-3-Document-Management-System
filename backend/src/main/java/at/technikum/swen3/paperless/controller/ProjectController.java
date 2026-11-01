@@ -9,7 +9,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import org.slf4j.Logger;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
@@ -26,7 +25,6 @@ public class ProjectController {
             @NotBlank @Size(max = 200) String name,
             @Size(max = 2000) String description) {}
 
-    //May be deletet
     public record CreateDocumentRequest(@NotBlank @Size(max = 255) String title) {}
 
     @PostMapping("/projects")
