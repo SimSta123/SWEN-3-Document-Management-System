@@ -68,32 +68,6 @@ public class DefaultProjectService implements ProjectService {
         return projectList;
     }
 
-    /*
-    @Override
-    @Transactional
-    public Document createDocument(String title) {
-        if (title == null || title.isBlank()) {
-            logger.debug("Creating document failed, cause: empty title");
-            throw new InvalidInputException("Document title must not be blank");
-        }
-
-        String cleanTitle = title.strip();
-
-        if (cleanTitle.length() > 255) {
-            logger.debug("Creating document failed, cause: title too long");
-            throw new InvalidInputException("Document title must not exceed 255 characters");
-        }
-
-        DocumentEntity newDocument = documents.save(new DocumentEntity(cleanTitle));
-
-        eventPublisher.publishDocumentCreated(newDocument.getId());
-
-        logger.info("Created document {} with id: {}", newDocument.getTitle(), newDocument.getId());
-
-        return mapper.toDocument(newDocument);
-    }
-     */
-
     @Override
     @Transactional
     public Document assignDocument(Long projectId, Long documentId) {
@@ -122,33 +96,6 @@ public class DefaultProjectService implements ProjectService {
         return mapper.toDocument(newDocument);
 
     }
-
-    /*
-    @Override
-    public List<Document> listAllDocuments() {
-        List<Document> documentList = documents.findAll(Sort.by("id")).stream().map(mapper::toDocument).toList();
-        logger.debug("Listed documents: count={}", documentList.size());
-        return documentList;
-    }
-
-    @Override
-    public Document getDocument(Long documentId) {
-        if (documentId == null || documentId <= 0) {
-            logger.debug("Getting document failed, cause: document id must be positive, got id: {}", documentId);
-            throw new InvalidInputException("Document id must be positive");
-        }
-
-        Document documentGet = documents.findById(documentId).map(mapper::toDocument)
-                .orElseThrow(() -> {
-                    logger.debug("Getting document failed, cause: document id not found, got id: {}", documentId);
-                    return new NotFoundException("Document not found");
-                });
-
-        logger.debug("Fetched documentId={}", documentId);
-        return documentGet;
-    }
-     */
-
 
     @Override
     public List<Document> listDocumentsInProject(Long projectId) {
