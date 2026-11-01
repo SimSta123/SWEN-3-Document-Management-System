@@ -14,7 +14,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Sort;
@@ -35,11 +34,6 @@ import static org.mockito.Mockito.*;
 
 import at.technikum.swen3.paperless.rabbitMQ.DocumentEventPublisher;
 
-
-import at.technikum.swen3.paperless.controller.DocumentController;
-
-
-
 @ExtendWith(MockitoExtension.class)
 class DefaultProjectServiceTest {
 
@@ -52,7 +46,6 @@ class DefaultProjectServiceTest {
     @Mock
     private ProjectMapper mapper;
 
-    @InjectMocks
     private DefaultProjectService service;
 
     @Mock
@@ -65,7 +58,7 @@ class DefaultProjectServiceTest {
     void setUp() {
         service = new DefaultProjectService(projects, documents, mapper, logger, publisher);
     }
-    /*
+
     @Test
     void createProjectTrimsNameAndDescription() {
         ProjectEntity saved = new ProjectEntity("University", "Course documents");
@@ -177,67 +170,6 @@ class DefaultProjectServiceTest {
         assertThat(service.listProjects()).isEmpty();
 
         verifyNoInteractions(mapper);
-    }
-
-    @Test
-    void createDocumentTrimsTitle() {
-        DocumentEntity saved = new DocumentEntity("Invoice");
-        Document expected = new Document(10L, "Invoice", null);
-
-        when(documents.save(any(DocumentEntity.class))).thenReturn(saved);
-        when(mapper.toDocument(saved)).thenReturn(expected);
-
-        Document result = service.createDocument("  Invoice  ");
-
-        ArgumentCaptor<DocumentEntity> captor = ArgumentCaptor.forClass(DocumentEntity.class);
-        verify(documents).save(captor.capture());
-
-        assertThat(captor.getValue().getTitle()).isEqualTo("Invoice");
-        assertThat(captor.getValue().getProject()).isNull();
-        assertThat(result).isEqualTo(expected);
-    }
-
-    @ParameterizedTest
-    @NullAndEmptySource
-    @ValueSource(strings = {"   ", "\t", "\n"})
-    //Testen null, "", "  " und umbruch in ""
-    void createDocumentRejectsBlankTitle(String title) {
-        InvalidInputException exception = assertThrows(InvalidInputException.class,
-                () -> service.createDocument(title)
-        );
-
-        assertThat(exception.getMessage()).isEqualTo("Document title must not be blank");
-
-        verifyNoInteractions(projects, documents, mapper);
-    }
-
-    @Test
-    void createDocumentRejectsTitleLongerThan255Characters() {
-        InvalidInputException exception = assertThrows(InvalidInputException.class,
-                () -> service.createDocument("a".repeat(256))
-        );
-
-        assertThat(exception.getMessage()).isEqualTo("Document title must not exceed 255 characters");
-
-        verifyNoInteractions(projects, documents, mapper);
-    }
-
-    @Test
-    void createDocumentAcceptsTitleWith255Characters() {
-        DocumentEntity saved = new DocumentEntity("a".repeat(255));
-        Document expected = new Document(10L, "a".repeat(255), null);
-
-        when(documents.save(any(DocumentEntity.class))).thenReturn(saved);
-        when(mapper.toDocument(saved)).thenReturn(expected);
-
-        Document result = service.createDocument("a".repeat(255));
-
-        ArgumentCaptor<DocumentEntity> captor = ArgumentCaptor.forClass(DocumentEntity.class);
-        verify(documents).save(captor.capture());
-
-        assertThat(captor.getValue().getTitle()).isEqualTo("a".repeat(255));
-        assertThat(captor.getValue().getProject()).isNull();
-        assertThat(result).isEqualTo(expected);
     }
 
     @Test
@@ -386,18 +318,4 @@ class DefaultProjectServiceTest {
 
         verifyNoInteractions(projects, documents, mapper);
     }
-
-    @ParameterizedTest
-    @CsvSource(value = {"null", "-1", "0"}, nullValues = "null")
-    void GetDocumentRejectsInvalidIds(Long documentId) {
-        InvalidInputException exception = assertThrows(InvalidInputException.class,
-                () -> service.getDocument(documentId)
-        );
-
-        assertThat(exception.getMessage()).isEqualTo("Document id must be positive");
-
-        verifyNoInteractions(projects, documents, mapper);
-    }
-
-     */
 }
