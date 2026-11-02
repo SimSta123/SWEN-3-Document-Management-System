@@ -1,7 +1,6 @@
 package at.technikum.swen3.paperless.controller;
 
 import at.technikum.swen3.paperless.service.ProjectService;
-import at.technikum.swen3.paperless.service.mapping.ProjectMapper;
 import at.technikum.swen3.paperless.service.model.Document;
 import at.technikum.swen3.paperless.service.model.Project;
 import jakarta.validation.Valid;
@@ -9,7 +8,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import org.slf4j.Logger;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 
@@ -17,60 +16,40 @@ import java.util.List;
 public class ProjectController {
     private final ProjectService service;
 
-    private final Logger logger;
-
-    public ProjectController(ProjectService service, Logger logger) {
-        this.service = service; this.logger = logger;
+    public ProjectController(ProjectService service) {
+        this.service = service;
     }
 
-
-    public record CreateProjectRequest(
-            @NotBlank @Size(max = 200) String name,
-            @Size(max = 2000) String description) {}
-
-    public record CreateDocumentRequest(@NotBlank @Size(max = 255) String title) {}
+    public record CreateProjectRequest(@NotBlank @Size(max = 200) String name, @Size(max = 2000) String description) {}
 
     @PostMapping("/projects")
     @ResponseStatus(HttpStatus.CREATED)
-    public Project createProject(@Valid @RequestBody CreateProjectRequest request) {
-        logger.info(request.toString());
+    public Project createProject(@Valid @RequestBody CreateProjectRequest request, HttpServletRequest httpRequest) {
+        httpRequest.setAttribute("logMessage", "Requesting to create project with name: %s, description: %s".formatted(request.name(), request.description()));
+
         return service.createProject(request.name(), request.description());
     }
 
     @GetMapping("/projects")
-    public List<Project> listProjects() {
-        logger.info("Requesting listing of projects");
+    public List<Project> listProjects(HttpServletRequest httpRequest) {
+        httpRequest.setAttribute("logMessage", "Requesting to list all projects");
+
         return service.listProjects();
     }
 
-    @PostMapping("/documents")
-    @ResponseStatus(HttpStatus.CREATED)
-    public Document createDocument(@Valid @RequestBody CreateDocumentRequest request) {
-        logger.info(request.toString());
-        return service.createDocument(request.title());
-    }
 
     @PutMapping("/projects/{projectId}/documents/{documentId}")
-    public Document assignDocument(@PathVariable Long projectId, @PathVariable Long documentId) {
-        logger.info("Assigning document: {} to project: {}", documentId, projectId);
+    public Document assignDocument(@PathVariable Long projectId, @PathVariable Long documentId, HttpServletRequest httpRequest) {
+        httpRequest.setAttribute("logMessage", "Requesting to assign document with id: %s to project with id: %s".formatted(documentId, projectId));
+
         return service.assignDocument(projectId, documentId);
     }
 
-    @GetMapping("/documents")
-    public List<Document> listAllDocuments() {
-        logger.info("Requesting listing all documents");
-        return service.listAllDocuments();
-    }
-
-    @GetMapping("/documents/{documentId}")
-    public Document getDocument(@PathVariable Long documentId) {
-        logger.info("Requesting document: {}", documentId);
-        return service.getDocument(documentId);
-    }
 
     @GetMapping("/projects/{projectId}/documents")
-    public List<Document> listDocuments(@PathVariable Long projectId) {
-        logger.info("Requesting listing documents for project: {}", projectId);
-        return service.listDocuments(projectId);
+    public List<Document> listDocumentsInProject(@PathVariable Long projectId, HttpServletRequest httpRequest) {
+        httpRequest.setAttribute("logMessage", "Requesting to list all documents in project with id: %s".formatted(projectId));
+
+        return service.listDocumentsInProject(projectId);
     }
 }

@@ -1,27 +1,54 @@
 # SWEN3 Document Management System
 
-Software Engineering 3 Labor, WS 2026 — Group G
+Software Engineering 3 Labor, WS 2026, Group G
 Yann Polini and Simon Stangelberger
 
-[Kanban board](https://github.com/users/YannPolini/projects/4) · [Sprint milestones](https://github.com/SimSta123/SWEN-3-Document-Management-System/milestones) · [Working together](CONTRIBUTING.md)
+[Repository](https://github.com/SimSta123/SWEN-3-Document-Management-System) | [Kanban board](https://github.com/users/YannPolini/projects/4) | [Milestones](https://github.com/SimSta123/SWEN-3-Document-Management-System/milestones)
 
-We are building a document management system as our semester project. The aim is to upload and organise documents, with text recognition, search and AI summaries added during the later sprints.
+This is our document management system for SWEN3. We can save document titles, list them on a dashboard and open their details. We can also post a PDF to the API, which sends a message to the worker. Our additional use case is organising documents into projects. Each document belongs to one project at a time, and assigning it to another project moves it there.
 
-## Sprint 1
+We use `sprint-3` for the current sprint and midterm review. It includes the earlier midterm work, PDF upload through REST, RabbitMQ and an empty OCR worker. `mid-term-code-review` is the older version. File storage, actual OCR and search come in Sprint 4.
 
-Our first step was to set up the backend, database and a basic web page. Docker Compose runs the services together, and GitHub Actions runs the build checks.
+## How our project works
 
-We added a small database example to follow a request through the controller, service and repository. `GET /one` reads a message from PostgreSQL, while `GET /one/i` returns a fixed response.
+We use HTML, CSS and JavaScript for the website, nginx for the web server, Java 25 with Spring Boot 4.1.1 for the backend, and PostgreSQL 17 for storage. We build the backend with Maven.
 
-Our additional use case is organising documents into projects. We can create projects with a name and description, create document records with a title, and assign them to a project. A project can contain several documents. Each document can belong to one project at a time, and assigning it to another project moves it there.
+```mermaid
+flowchart LR
+    Browser[Browser] --> Web[nginx]
+    subgraph Backend[Spring Boot backend]
+        Controller[ProjectController] --> Service[DefaultProjectService]
+        DocumentController --> DocumentService[DefaultDocumentService]
+        DocumentService --> Repository
+        DocumentService --> Mapper
+        DocumentService --> Publisher[DocumentEventPublisher]
+        Service --> Repository[JPA repositories]
+        Service --> Mapper[MapStruct]
+        Mapper --> Records[Project and Document response records]
+    end
+    Web -->|/api requests| Controller
+    Web -->|/api/documents| DocumentController
+    Repository --> Database[(PostgreSQL)]
+    Publisher --> RabbitMQ --> Worker[Empty OCR worker]
+```
 
-The records and their relationships are stored in PostgreSQL. Flyway creates the tables, JPA repositories handle database access, and MapStruct converts database entities into the records returned by the API. For now, this feature stores document titles and project membership. File uploads and the project interface are still to come.
+When we save a title or upload a PDF, the request goes through nginx to `DocumentController`. It calls `DocumentService`, implemented by `DefaultDocumentService`. The service validates and saves a `DocumentEntity`, then publishes a document-created message to RabbitMQ. MapStruct converts the entity into the `Document` record returned as JSON. Project creation and document assignment use `ProjectController` and `DefaultProjectService`.
+
+The main parts are:
+
+- We separate request handling, business logic and database access. The service interface lets us test business logic separately.
+- We use Spring to inject the service, repositories, mapper and logger through constructors.
+- Spring Data JPA handles the database access. Flyway creates the tables, and Hibernate checks that they match our entities.
+- We use MapStruct to keep database entities separate from the records returned by the API.
+- We use nginx to serve the website and forward API requests. It removes `/api/` before forwarding them to the backend.
+
+The main code is in [controllers](backend/src/main/java/at/technikum/swen3/paperless/controller), [services](backend/src/main/java/at/technikum/swen3/paperless/service), [entities](backend/src/main/java/at/technikum/swen3/paperless/model), [repositories](backend/src/main/java/at/technikum/swen3/paperless/repository) and [migrations](backend/src/main/resources/db/migration).
 
 ## Run the project
 
 You need Docker Desktop with Linux containers enabled.
 
-1. Copy `.env.example` to `.env` and set `POSTGRES_PASSWORD`.
+1. Copy `.env.example` to `.env` and set `POSTGRES_PASSWORD` and `RABBITMQ_PASSWORD`.
 2. From the project folder, run:
 
    ```sh
@@ -30,42 +57,81 @@ You need Docker Desktop with Linux containers enabled.
 
 3. Open [localhost](http://localhost/) for the website. The API uses [localhost:8081](http://localhost:8081) by default.
 
-The default ports are 80 for the web page and 8081 for the API. If needed, change `WEB_PORT` and `API_PORT` in `.env`. PostgreSQL is reachable by the backend inside Docker; it does not publish a host port.
+We can change the default ports with `WEB_PORT` and `API_PORT` in `.env`. PostgreSQL is only reachable inside Docker.
 
-Stop the services with `docker compose down`. The database volume is kept. Keep `.env` out of Git. Changing its password does not change the password in an existing database volume.
+We stop the services with `docker compose down`, which keeps the database volume. We keep `.env` out of Git. Changing its password does not update an existing database volume.
 
-## Sprint 2 website
+## Website and API
 
-The dashboard lists saved documents under their projects. You can collapse each project, and documents without a project appear under Unassigned. Add a document by entering a title, then click it to see its title, ID and project. Titles must not be blank or longer than 255 characters. Refreshing loads the saved records again. The pages show a message when the library is empty, a request fails or a document is missing.
+Our [dashboard](frontend/public/index.html) groups documents by project, including Unassigned. We can add a title and open the [detail page](frontend/public/document.html) to see its title, ID and project. We show messages for empty lists, failed requests and missing documents.
 
-The website sends requests through nginx at `/api/`. nginx removes that prefix before passing the request to the backend. The frontend runs in its own Docker container. For now, we save document titles and project links; file uploads come later.
+We check titles in the website and validate requests in the API. The service checks inputs too, so these checks also apply when it is called directly. Blank names or titles, values over the length limits and invalid IDs are rejected. Missing records return 404. The request filter logs requests, and the service logs its operations and rejected inputs. Service DEBUG logging is enabled in [application.properties](backend/src/main/resources/application.properties).
 
-We used OpenAI Codex to help build and check the Sprint 2 pages, document reads and server setup. Source links are included in the code.
-
-## Try the API
-
-The [project requests](requests/projects.http) show the workflow: create a project, create a document record, assign it, then list the project's documents. Use the IDs returned by the create requests and adjust the API port if you changed it.
+Our [request examples](requests/projects.http) cover this flow. We use the returned IDs in later requests.
 
 | Method | Endpoint | Action |
 | --- | --- | --- |
 | POST | `/projects` | Create a project |
 | GET | `/projects` | List projects |
-| POST | `/documents` | Create a document record |
+| POST | `/documents` | Create a document record from JSON, or accept a multipart PDF upload |
 | GET | `/documents` | List all document records, including unassigned ones |
-| GET | `/documents/{documentId}` | Read one document record; unknown IDs return 404 |
+| GET | `/documents/{documentId}` | Read one document record, or return 404 |
 | PUT | `/projects/{projectId}/documents/{documentId}` | Assign or move a document |
 | GET | `/projects/{projectId}/documents` | List a project's documents |
 
-There are also [health requests](requests/health.http) to check the backend and database connection.
+Our [health requests](requests/health.http) check the backend and database connection.
+
+### Post a PDF for Sprint 3
+
+Send the PDF as a multipart `file` field. You can also set a `title`, otherwise we use the filename. Files can be up to 10 MiB. Empty files and files without a `%PDF-` header return 400. We only check the header, we do not parse the PDF yet.
+
+```sh
+curl --fail-with-body -F "file=@/path/to/notes.pdf;type=application/pdf" -F "title=Course notes" http://localhost/api/documents
+docker compose logs --since 1m ocr-worker
+```
+
+On Windows use `curl.exe` and replace the file path with your PDF's path. You can also call the backend directly at `http://localhost:8081/documents`, using your `API_PORT` if you changed it. The response should be 201 with the new document ID. Look for `Received upload for OCR: Document created: <id>` in the worker logs. The website still uses the title form.
+
+For now, we check the uploaded PDF but only save its title. The file is discarded after the request. RabbitMQ gets the document ID in a text message. Saving the actual file and running OCR come in Sprint 4.
+
+## Failure handling
+
+The service uses `InvalidInputException` for invalid values and `NotFoundException` for missing records. [ApiExceptionHandler](backend/src/main/java/at/technikum/swen3/paperless/controller/ApiExceptionHandler.java) turns these into 400 and 404 responses. It also handles invalid JSON and invalid request parameters. Errors use a JSON problem response with a status and detail.
+
+Database conflicts return 409, unavailable connections and temporary database failures return 503, and other failures return 500. The full error goes in the logs. The API returns a short message without SQL or connection details.
+
+## OCR worker
+
+The [worker](ocr-worker/src/main/java/at/technikum/swen3/worker/UploadListener.java) runs in its own container. It receives upload messages from RabbitMQ and logs them. It does not read PDFs or run OCR yet.
+
+We use a durable queue called `document.uploaded`. Set `OCR_QUEUE` to change it. The worker declares the queue when it connects. Spring acknowledges each message after the listener returns. Blank messages and invalid UTF-8 are rejected with `InvalidUploadMessageException`. Rejected messages go to the durable `document.uploaded.failed` queue. Other listener failures go there too, so a bad message does not get retried forever. The failed queue has no consumer. We can inspect it in RabbitMQ. Spring reconnects the listener if the broker goes offline.
+
+The backend sends `Document created: <id>` through the default exchange (`""`), using the queue name as the routing key. The worker just logs the message. The queue uses `x-dead-letter-exchange=""` and `x-dead-letter-routing-key="document.uploaded.failed"`. With another `OCR_QUEUE`, the failed queue is that name plus `.failed`.
+
+If you have an older queue without these failed-message settings, RabbitMQ will reject the changed arguments. Use a new `OCR_QUEUE` for testing, or drain the old queue before recreating it. Do not delete queued uploads.
+
+Run `docker compose logs -f ocr-worker` to see received messages. RabbitMQ's management page is at [localhost:15672](http://localhost:15672/), with user `paperless` and the password from `.env`.
+
+The listener follows the [Spring AMQP example](https://docs.spring.io/spring-amqp/reference/amqp/receiving-messages/async-annotation-driven.html) and [exception handling docs](https://docs.spring.io/spring-amqp/reference/amqp/exception-handling.html). We used Codex to help with the worker, failure handling and checks.
 
 ## Tests
 
-The Docker build runs the automated tests. To run them locally with JDK 25, use `./mvnw verify` from `backend/`, or `mvnw.cmd verify` on Windows. The coverage report is generated at `backend/target/site/jacoco/index.html`.
+We use JUnit and Mockito with mocked repositories and mapping to test valid/invalid inputs, length limits, missing records and assignment. These tests do not use our PostgreSQL database.
 
-We currently have 22 tests for the services, startup, document reads and title creation. The read tests include an empty list, documents with and without a project, one document by ID and a missing document. We also checked the website in the browser: validation, saving, project lists, details and refreshing. The remaining Sprint 2 backend tests are a separate task.
+Our Spring Boot tests use real HTTP requests and an H2 database. They cover startup, health, document creation, reads and PDF uploads. RabbitMQ is mocked in these tests. We check the running app separately with PostgreSQL and RabbitMQ.
 
-## Technologies and team workflow
+The Docker build runs our tests. With JDK 25 installed, we can also run `./mvnw verify` from `backend/`, or `.\mvnw.cmd verify` on Windows. JaCoCo writes the coverage report to `backend/target/site/jacoco/index.html`.
 
-We use Java 25, Spring Boot 4.1.1, Maven, PostgreSQL 17, Spring Data JPA, Flyway and MapStruct. The basic frontend uses HTML, CSS and JavaScript served by nginx.
+On 1 November 2026, all 66 backend tests and 7 worker tests passed. Backend coverage was 93.27% for lines and 93.10% for branches. These figures include unit and HTTP integration tests.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how we use feature and sprint branches.
+Our [CI workflow](.github/workflows/ci.yml) runs the backend tests and starts the Compose stack. The worker build runs its own unit tests. [The worker check](scripts/check-ocr-worker.py) sends text and JSON messages, checks the logs and acknowledgements, and checks that blank or invalid UTF-8 messages go to the failed queue.
+
+To run the worker check locally, set `RABBITMQ_PASSWORD` in your shell to match the stack and run `python scripts/check-ocr-worker.py`. It uses `OCR_QUEUE` if set. Use a separate test stack because the script reads messages from the failed queue. For the full PDF-to-worker check, use the upload and log commands above.
+
+## Our work and lessons learned
+
+We started with the API and project grouping, then added the website, validation, logging and tests. Sprint 3 adds RabbitMQ, the empty worker and the PDF endpoint. Our tasks are on the board linked at the top.
+
+One thing we ran into was nginx forwarding the wrong path. Removing `/api/` fixed that. We also had to put validation in the service, since frontend and API validation do not cover direct service calls. For test coverage we check the JaCoCo report as well as the test results.
+
+We work on sprint branches and merge into `main` after checking the whole app. Previous merges are in the [pull requests](https://github.com/SimSta123/SWEN-3-Document-Management-System/pulls?q=is%3Apr+is%3Amerged). We both go through the code before the review.

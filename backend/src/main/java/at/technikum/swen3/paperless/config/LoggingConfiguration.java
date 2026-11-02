@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Scope;
 public class LoggingConfiguration {
 
     @Bean
-    @Scope("prototype") //Bean wird bei jeder Injection die anfordernde Klasse neu, damit nicht SampleService und ProjectService den gleichen Logger bekommen (Damit bei INFO die richtige Klasse steht)
+    @Scope("prototype") // Jede Klasse bekommt einen Logger mit ihrem eigenen Klassennamen.
     //Wenn eine Klasse einen Logger benötigt, liefere einen Logger mit dem Namen dieser Klasse.
     //InjectionPoint: Wo wird der Logger benötigt?
     //.getDeclaringClass: Welche Klasse dieses Bean beansprucht

@@ -18,6 +18,22 @@ Content-Type: application/json
 
 {"title":"Sprint 1 notes"}
 
+### Upload a PDF and publish its document-created message (201)
+# Replace ./notes.pdf with a local PDF. The title part is optional.
+POST {{baseUrl}}/documents
+Content-Type: multipart/form-data; boundary=swen3-pdf-upload
+
+--swen3-pdf-upload
+Content-Disposition: form-data; name="title"
+
+Course notes
+--swen3-pdf-upload
+Content-Disposition: form-data; name="file"; filename="notes.pdf"
+Content-Type: application/pdf
+
+< ./notes.pdf
+--swen3-pdf-upload--
+
 ### List all saved documents, including unassigned ones (200)
 GET {{baseUrl}}/documents
 
@@ -40,4 +56,4 @@ Content-Type: application/json
 {"name":" "}
 
 ### Unknown project (404)
-GET {{baseUrl}}/projects/0/documents
+GET {{baseUrl}}/projects/9223372036854775807/documents

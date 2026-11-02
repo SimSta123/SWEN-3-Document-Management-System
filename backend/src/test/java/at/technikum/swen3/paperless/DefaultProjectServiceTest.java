@@ -11,21 +11,28 @@ import at.technikum.swen3.paperless.service.model.Project;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
+import at.technikum.swen3.paperless.service.exception.InvalidInputException;
+import at.technikum.swen3.paperless.service.exception.NotFoundException;
 import org.slf4j.Logger;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+
+import at.technikum.swen3.paperless.rabbitMQ.DocumentEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class DefaultProjectServiceTest {
@@ -44,9 +51,12 @@ class DefaultProjectServiceTest {
     @Mock
     private Logger logger;
 
+    @Mock
+    DocumentEventPublisher publisher;
+
     @BeforeEach
     void setUp() {
-        service = new DefaultProjectService(projects, documents, mapper, logger);
+        service = new DefaultProjectService(projects, documents, mapper, logger, publisher);
     }
 
     @Test
@@ -84,6 +94,59 @@ class DefaultProjectServiceTest {
         assertThat(result).isEqualTo(expected);
     }
 
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"   ", "\t", "\n"})
+    //Testen null, "", "  " und umbruch in ""
+    void createProjectRejectsBlankName(String name) {
+        InvalidInputException exception = assertThrows(InvalidInputException.class,
+                () -> service.createProject(name, "")
+        );
+
+        assertThat(exception.getMessage()).isEqualTo("Project name must not be blank");
+
+        verifyNoInteractions(projects, documents, mapper);
+    }
+
+    @Test
+    void createProjectRejectsNameTooLong() {
+        InvalidInputException exception = assertThrows(InvalidInputException.class,
+                () -> service.createProject("123456789101112131415116171819202122232425262728293031323435363738394041424344454647484950515253545556575859606162636465666768697071727374757677787980818283848586878889909192939495969798991001011021031", "")
+        );
+
+
+        verifyNoInteractions(projects, documents, mapper);
+    }
+
+    @Test
+    void createProjectRejectsDescriptionLongerThan2000Characters() {
+        InvalidInputException exception = assertThrows(InvalidInputException.class,
+                () -> service.createProject("Testprojekt", "a".repeat(2001))
+        );
+
+        assertThat(exception.getMessage()).isEqualTo("Project description must not exceed 2000 characters");
+
+        verifyNoInteractions(projects, documents, mapper);
+    }
+
+    @Test
+    void createProjectAcceptsLimitLengthNameAndDescription() {
+        ProjectEntity saved = new ProjectEntity("a".repeat(200), "a".repeat(2000));
+        Project expected = new Project(1L, "a".repeat(200), "a".repeat(2000));
+
+        when(projects.save(any(ProjectEntity.class))).thenReturn(saved);
+        when(mapper.toProject(saved)).thenReturn(expected);
+
+        Project result = service.createProject("a".repeat(200), "a".repeat(2000));
+
+        ArgumentCaptor<ProjectEntity> captor = ArgumentCaptor.forClass(ProjectEntity.class);
+        verify(projects).save(captor.capture());
+
+        assertThat(captor.getValue().getName()).isEqualTo("a".repeat(200));
+        assertThat(captor.getValue().getDescription()).isEqualTo("a".repeat(2000));
+        assertThat(result).isEqualTo(expected);
+    }
+
     @Test
     void listProjectsRequestsIdSortingAndMapsResults() {
         ProjectEntity first = new ProjectEntity("First", "");
@@ -107,24 +170,6 @@ class DefaultProjectServiceTest {
         assertThat(service.listProjects()).isEmpty();
 
         verifyNoInteractions(mapper);
-    }
-
-    @Test
-    void createDocumentTrimsTitle() {
-        DocumentEntity saved = new DocumentEntity("Invoice");
-        Document expected = new Document(10L, "Invoice", null);
-
-        when(documents.save(any(DocumentEntity.class))).thenReturn(saved);
-        when(mapper.toDocument(saved)).thenReturn(expected);
-
-        Document result = service.createDocument("  Invoice  ");
-
-        ArgumentCaptor<DocumentEntity> captor = ArgumentCaptor.forClass(DocumentEntity.class);
-        verify(documents).save(captor.capture());
-
-        assertThat(captor.getValue().getTitle()).isEqualTo("Invoice");
-        assertThat(captor.getValue().getProject()).isNull();
-        assertThat(result).isEqualTo(expected);
     }
 
     @Test
@@ -186,13 +231,11 @@ class DefaultProjectServiceTest {
     void assignDocumentThrowsNotFoundWhenProjectDoesNotExist() {
         when(projects.findById(1L)).thenReturn(Optional.empty());
 
-        ResponseStatusException exception = catchThrowableOfType(
-                ResponseStatusException.class,
+        NotFoundException exception = catchThrowableOfType(NotFoundException.class,
                 () -> service.assignDocument(1L, 10L));
 
         assertThat(exception).isNotNull();
-        assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(exception.getReason()).isEqualTo("Project not found");
+        assertThat(exception.getMessage()).isEqualTo("Project not found");
         verifyNoInteractions(documents, mapper);
     }
 
@@ -203,19 +246,30 @@ class DefaultProjectServiceTest {
         when(projects.findById(1L)).thenReturn(Optional.of(project));
         when(documents.findById(10L)).thenReturn(Optional.empty());
 
-        ResponseStatusException exception = catchThrowableOfType(
-                ResponseStatusException.class,
+        NotFoundException exception = catchThrowableOfType(NotFoundException.class,
                 () -> service.assignDocument(1L, 10L));
 
         assertThat(exception).isNotNull();
-        assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(exception.getReason()).isEqualTo("Document not found");
+        assertThat(exception.getMessage()).isEqualTo("Document not found");
         verify(documents, never()).save(any(DocumentEntity.class));
         verifyNoInteractions(mapper);
     }
 
+
+    @ParameterizedTest
+    @CsvSource(value = {"null, 1", "0, 1", "-1, 1", "1, null", "1, 0", "1, -1"}, nullValues = "null")
+    void assignDocumentRejectsInvalidIds(Long projectId, Long documentId) {
+        InvalidInputException exception = assertThrows(InvalidInputException.class,
+                () -> service.assignDocument(projectId, documentId)
+        );
+
+        assertThat(exception.getMessage()).isEqualTo("IDs must be positive");
+
+        verifyNoInteractions(projects, documents, mapper);
+    }
+
     @Test
-    void listDocumentsReturnsMappedDocumentsInRepositoryOrder() {
+    void listDocumentsInProjectReturnsMappedDocumentsInRepositoryOrder() {
         DocumentEntity first = new DocumentEntity("First");
         DocumentEntity second = new DocumentEntity("Second");
         Document firstResult = new Document(10L, "First", 1L);
@@ -226,32 +280,42 @@ class DefaultProjectServiceTest {
         when(mapper.toDocument(first)).thenReturn(firstResult);
         when(mapper.toDocument(second)).thenReturn(secondResult);
 
-        assertThat(service.listDocuments(1L)).containsExactly(firstResult, secondResult);
+        assertThat(service.listDocumentsInProject(1L)).containsExactly(firstResult, secondResult);
 
         verify(documents).findByProjectIdOrderByIdAsc(1L);
     }
 
     @Test
-    void listDocumentsReturnsEmptyListWhenProjectHasNoDocuments() {
+    void listDocumentsInProjectReturnsEmptyListWhenProjectHasNoDocuments() {
         when(projects.existsById(1L)).thenReturn(true);
         when(documents.findByProjectIdOrderByIdAsc(1L)).thenReturn(List.of());
 
-        assertThat(service.listDocuments(1L)).isEmpty();
+        assertThat(service.listDocumentsInProject(1L)).isEmpty();
 
         verifyNoInteractions(mapper);
     }
 
     @Test
-    void listDocumentsThrowsNotFoundWhenProjectDoesNotExist() {
+    void listDocumentsInProjectThrowsNotFoundWhenProjectDoesNotExist() {
         when(projects.existsById(1L)).thenReturn(false);
 
-        ResponseStatusException exception = catchThrowableOfType(
-                ResponseStatusException.class,
-                () -> service.listDocuments(1L));
+        NotFoundException exception = catchThrowableOfType(NotFoundException.class,
+                () -> service.listDocumentsInProject(1L));
 
         assertThat(exception).isNotNull();
-        assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(exception.getReason()).isEqualTo("Project not found");
+        assertThat(exception.getMessage()).isEqualTo("Project not found");
         verifyNoInteractions(documents, mapper);
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {"null", "-1", "0"}, nullValues = "null")
+    void listDocumentsInProjectRejectsInvalidIds(Long projectId) {
+        InvalidInputException exception = assertThrows(InvalidInputException.class,
+                () -> service.listDocumentsInProject(projectId)
+        );
+
+        assertThat(exception.getMessage()).isEqualTo("Project id must be positive");
+
+        verifyNoInteractions(projects, documents, mapper);
     }
 }
