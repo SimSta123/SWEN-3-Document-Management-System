@@ -26,7 +26,18 @@ public class DocumentStorage implements S3Storage {
     }
 
     public String upload(MultipartFile file) throws IOException {
-        String objectKey = "documents/" + UUID.randomUUID() + ".pdf";
+        String filename = file.getOriginalFilename();
+
+        if (filename == null || filename.isBlank()) {
+            filename = "document.pdf";
+        }
+
+        // Pfadbestandteile entfernen und Sonderzeichen ersetzen
+        filename = filename.replace('\\', '/');
+        filename = filename.substring(filename.lastIndexOf('/') + 1);
+        filename = filename.replaceAll("[^a-zA-Z0-9._-]", "_");
+
+        String objectKey = "documents/" + UUID.randomUUID() + "_" + filename;
         Path tempFile = Files.createTempFile("document-", ".pdf");
 
         //contentType damit information das pdf ist gespeichert wird
