@@ -40,6 +40,12 @@
             <button id="save" class="button" type="submit">Save document <span aria-hidden="true">↗</span></button>
             <p id="form-status" class="message success" role="status" hidden></p>
           </form>
+          <form id="upload-form">
+            <label for="pdf-file">PDF auswählen</label>
+            <input id="pdf-file" type="file" accept=".pdf,application/pdf" required>
+            <button id="upload-button" class="button" type="submit">PDF hochladen</button>
+            <p id="upload-status" role="status"></p>
+          </form>
         </section>
         <p class="aside-note">Documents without a project appear under Unassigned.</p>
       </aside>

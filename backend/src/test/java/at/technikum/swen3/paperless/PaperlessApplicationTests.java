@@ -19,6 +19,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 class PaperlessApplicationTests {
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private software.amazon.awssdk.services.s3.S3Client s3;
+
 
     @LocalServerPort
     private int port;

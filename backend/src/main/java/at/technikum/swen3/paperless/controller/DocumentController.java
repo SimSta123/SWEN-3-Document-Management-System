@@ -28,7 +28,7 @@ public class DocumentController {
 
     public record CreateDocumentRequest(@NotBlank @Size(max = 255) String title) {}
 
-    @PostMapping(value = "/documents", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/documents")
     @ResponseStatus(HttpStatus.CREATED)
     public Document createDocument(@Valid @RequestBody CreateDocumentRequest request, HttpServletRequest httpRequest) {
         httpRequest.setAttribute("logMessage", "Requesting to create document with title: %s".formatted(request.title()));
@@ -58,7 +58,7 @@ public class DocumentController {
         filename = filename.replace('\\', '/');
         filename = filename.substring(filename.lastIndexOf('/') + 1);
         httpRequest.setAttribute("logMessage", "Requesting to create document from PDF upload");
-        return service.createDocument(title == null ? filename : title);
+        return service.createActualDocument(file, title == null ? filename : title);
     }
 
     @GetMapping("/documents")

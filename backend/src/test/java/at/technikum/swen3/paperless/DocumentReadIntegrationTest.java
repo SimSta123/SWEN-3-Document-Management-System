@@ -31,6 +31,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 class DocumentReadIntegrationTest {
+    @MockitoBean
+    private software.amazon.awssdk.services.s3.S3Client s3;
+
     @LocalServerPort private int port;
     @Autowired private ProjectService service;
     @Autowired private DocumentService docService;
@@ -136,7 +139,9 @@ class DocumentReadIntegrationTest {
         assertThat(saved).hasSize(1);
         assertThat(saved.getFirst().getTitle()).isEqualTo("notes.pdf");
         assertThat(response.body()).contains("\"id\":" + saved.getFirst().getId(), "\"title\":\"notes.pdf\"");
-        verify(rabbit).convertAndSend("document.uploaded", "Document created: " + saved.getFirst().getId());
+        assertThat(saved.getFirst().getObjectKey()).startsWith("documents/").endsWith(".pdf");
+        verify(rabbit).convertAndSend("document.uploaded", "Document created: "
+                + saved.getFirst().getId() + " with key: " + saved.getFirst().getObjectKey());
     }
 
     @Test

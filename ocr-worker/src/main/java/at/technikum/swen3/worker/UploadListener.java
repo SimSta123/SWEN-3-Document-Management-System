@@ -27,6 +27,7 @@ public class UploadListener {
                 throw new InvalidUploadMessageException("Upload message must not be blank");
             }
             logger.info("Received upload for OCR: {}", body.replace('\r', ' ').replace('\n', ' '));
+            System.out.println(body);
         } catch (CharacterCodingException exception) {
             logger.warn("Rejected upload message: invalid UTF-8");
             throw new InvalidUploadMessageException("Upload message must be UTF-8", exception);

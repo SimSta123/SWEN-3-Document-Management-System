@@ -82,6 +82,12 @@ function startDashboard() {
   const save = document.querySelector("#save");
   const formError = document.querySelector("#form-error");
   const formStatus = document.querySelector("#form-status");
+
+  const uploadForm = document.querySelector("#upload-form");
+  const pdfInput = document.querySelector("#pdf-file");
+  const uploadButton = document.querySelector("#upload-button");
+  const uploadStatus = document.querySelector("#upload-status");
+
   let loadVersion = 0;
 
   async function loadLibrary() {
@@ -152,6 +158,35 @@ function startDashboard() {
   });
   refresh.addEventListener("click", loadLibrary);
   loadLibrary();
+
+  //pdf upload
+  uploadForm.addEventListener("submit", async event => {
+    event.preventDefault();
+
+    const file = pdfInput.files[0];
+    if (!file || uploadButton.disabled) return;
+
+    const data = new FormData();
+    data.append("file", file);
+
+    uploadButton.disabled = true;
+    uploadStatus.textContent = "PDF wird hochgeladen…";
+
+    try {
+      await api("/documents", {
+       method: "POST",
+        body: data,
+      });
+
+      uploadForm.reset();
+      uploadStatus.textContent = "PDF erfolgreich hochgeladen.";
+      await loadLibrary();
+    } catch (error) {
+      uploadStatus.textContent = error.status === 400 ? "Die Datei wurde abgelehnt. Bitte eine gültige PDF auswählen." : "Upload fehlgeschlagen.";
+    } finally {
+      uploadButton.disabled = false;
+    }
+  });
 }
 
 function startDetail() {

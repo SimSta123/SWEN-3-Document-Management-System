@@ -24,4 +24,11 @@ public class RabbitDocumentEventPublisher implements DocumentEventPublisher {
 
         logger.debug("Published document-created message: documentId={}, queue={}", documentId, uploadQueue);
     }
+
+    @Override
+    public void publishDocumentCreatedWKey(Long documentId, String key) {
+        rabbit.convertAndSend(uploadQueue, "Document created: " + documentId + " with key: " + key);
+
+        logger.debug("Published document-created message: documentId={}, key={}, queue={}", documentId, key, uploadQueue);
+    }
 }

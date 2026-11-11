@@ -30,6 +30,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+  rustfs:
+    image: rustfs/rustfs:latest
+    environment:
+      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY:?Set RUSTFS_ACCESS_KEY}
+      RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY:?Set RUSTFS_SECRET_KEY}
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - rustfs-data:/data
+    restart: unless-stopped
 
   backend:
     build: ./backend
@@ -41,6 +52,10 @@ services:
       RABBITMQ_USER: paperless
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
       OCR_QUEUE: ${OCR_QUEUE:-document.uploaded}
+      STORAGE_ENDPOINT: http://rustfs:9000
+      STORAGE_BUCKET: documents
+      STORAGE_ACCESS_KEY: ${RUSTFS_ACCESS_KEY:?Set RUSTFS_ACCESS_KEY}
+      STORAGE_SECRET_KEY: ${RUSTFS_SECRET_KEY:?Set RUSTFS_SECRET_KEY}
     ports:
       - "127.0.0.1:${API_PORT:-8081}:8081"
     depends_on:
@@ -85,3 +100,4 @@ services:
 volumes:
   postgres-data:
   rabbitmq-data:
+  rustfs-data:
