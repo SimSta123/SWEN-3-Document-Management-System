@@ -12,9 +12,6 @@ permissions:
 jobs:
   backend:
     runs-on: ubuntu-latest
-    env:
-      RUSTFS_ACCESS_KEY: paperless-ci
-      RUSTFS_SECRET_KEY: ci-password
     defaults:
       run:
         working-directory: backend
@@ -41,6 +38,8 @@ jobs:
       RABBITMQ_PASSWORD: ci-only-rabbitmq-password
       WEB_PORT: "8088"
       API_PORT: "8081"
+      RUSTFS_ACCESS_KEY: paperless-ci
+      RUSTFS_SECRET_KEY: ci-password
     steps:
       - uses: actions/checkout@v4
       - name: Start full stack
