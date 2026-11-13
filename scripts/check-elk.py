@@ -47,7 +47,8 @@ while time.monotonic() < deadline:
             print("ELK check passed: Kibana is available and the Logstash event reached Elasticsearch.")
             break
     except urllib.error.HTTPError as error:
-        if error.code != 404:
+        # The first log index can briefly exist before its shard is ready to search.
+        if error.code not in (404, 503):
             raise
     time.sleep(1)
 else:
