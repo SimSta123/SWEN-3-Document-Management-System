@@ -40,6 +40,100 @@ services:
       - "127.0.0.1:9001:9001"
     volumes:
       - rustfs-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:9000/health/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.5.6
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "true"
+      xpack.security.http.ssl.enabled: "false"
+      xpack.security.transport.ssl.enabled: "false"
+      xpack.ml.enabled: "false"
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:?Set ELASTIC_PASSWORD in .env}
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    ports:
+      - "127.0.0.1:${ELASTICSEARCH_PORT:-9200}:9200"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent --user \"elastic:$${ELASTIC_PASSWORD}\" \"http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s\" > /dev/null"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
+    restart: unless-stopped
+
+  kibana-setup:
+    image: docker.elastic.co/kibana/kibana:9.5.6
+    entrypoint: ["/usr/share/kibana/node/default/bin/node", "/setup-kibana.mjs"]
+    environment:
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:?Set ELASTIC_PASSWORD in .env}
+      KIBANA_PASSWORD: ${KIBANA_PASSWORD:?Set KIBANA_PASSWORD in .env}
+    volumes:
+      - ./docker/elk/setup-kibana.mjs:/setup-kibana.mjs:ro
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    mem_limit: 256m
+    restart: "no"
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:9.5.6
+    environment:
+      SERVER_HOST: 0.0.0.0
+      SERVER_NAME: paperless-kibana
+      ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
+      ELASTICSEARCH_USERNAME: kibana_system
+      ELASTICSEARCH_PASSWORD: ${KIBANA_PASSWORD:?Set KIBANA_PASSWORD in .env}
+      NODE_OPTIONS: --max-old-space-size=768
+    ports:
+      - "127.0.0.1:${KIBANA_PORT:-5601}:5601"
+    volumes:
+      - kibana-data:/usr/share/kibana/data
+    depends_on:
+      kibana-setup:
+        condition: service_completed_successfully
+    mem_limit: 1536m
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:5601/api/status"]
+      interval: 10s
+      timeout: 10s
+      retries: 24
+      start_period: 60s
+    restart: unless-stopped
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:9.5.6
+    environment:
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:?Set ELASTIC_PASSWORD in .env}
+      LS_JAVA_OPTS: -Xms256m -Xmx256m
+      PIPELINE_WORKERS: "1"
+      PIPELINE_ECS_COMPATIBILITY: disabled
+      MONITORING_ENABLED: "false"
+      QUEUE_TYPE: persisted
+    ports:
+      - "127.0.0.1:${LOGSTASH_PORT:-18080}:8080"
+    volumes:
+      - ./docker/elk/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+      - logstash-data:/usr/share/logstash/data
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    mem_limit: 768m
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:9600/_node/pipelines/main"]
+      interval: 10s
+      timeout: 10s
+      retries: 24
+      start_period: 30s
     restart: unless-stopped
 
   backend:
@@ -63,6 +157,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      rustfs:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8081/actuator/health/readiness"]
       interval: 10s
@@ -78,8 +174,21 @@ services:
       RABBITMQ_USER: paperless
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
       OCR_QUEUE: ${OCR_QUEUE:-document.uploaded}
+      OCR_RESULT_QUEUE: ${OCR_RESULT_QUEUE:-document.ocr.completed}
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      ELASTICSEARCH_INDEX: ${ELASTICSEARCH_INDEX:-documents}
+      ELASTICSEARCH_USERNAME: elastic
+      ELASTICSEARCH_PASSWORD: ${ELASTIC_PASSWORD:?Set ELASTIC_PASSWORD in .env}
+      STORAGE_ENDPOINT: http://rustfs:9000
+      STORAGE_BUCKET: documents
+      STORAGE_ACCESS_KEY: ${RUSTFS_ACCESS_KEY:?Set RUSTFS_ACCESS_KEY}
+      STORAGE_SECRET_KEY: ${RUSTFS_SECRET_KEY:?Set RUSTFS_SECRET_KEY}
     depends_on:
       rabbitmq:
+        condition: service_healthy
+      rustfs:
+        condition: service_healthy
+      elasticsearch:
         condition: service_healthy
     restart: unless-stopped
 
@@ -101,3 +210,6 @@ volumes:
   postgres-data:
   rabbitmq-data:
   rustfs-data:
+  elasticsearch-data:
+  kibana-data:
+  logstash-data:
