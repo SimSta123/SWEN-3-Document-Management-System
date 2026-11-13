@@ -40,10 +40,12 @@ jobs:
       API_PORT: "8081"
       RUSTFS_ACCESS_KEY: paperless-ci
       RUSTFS_SECRET_KEY: ci-password
+      ELASTIC_PASSWORD: ci-only-elasticsearch-password
+      KIBANA_PASSWORD: ci-only-kibana-service-password
     steps:
       - uses: actions/checkout@v4
       - name: Start full stack
-        run: docker compose up --build --detach --wait --wait-timeout 240
+        run: docker compose up --build --detach --wait --wait-timeout 360
       - name: Check frontend and database-backed health route
         run: |
           curl --fail --retry 5 --retry-delay 2 http://localhost:8088/ -o /tmp/paperless.html
@@ -57,6 +59,13 @@ jobs:
           grep -q 'id="document-details"' /tmp/paperless-detail.html
       - name: Check OCR worker
         run: python3 scripts/check-ocr-worker.py
+      - name: Check PDF storage and OCR result
+        env:
+          API_URL: http://localhost:8088/api
+          ELASTICSEARCH_PASSWORD: ${{ env.ELASTIC_PASSWORD }}
+        run: python3 scripts/check-ocr-flow.py
+      - name: Check ELK connections
+        run: python3 scripts/check-elk.py
       - name: Show service logs
         if: failure()
         run: docker compose logs --no-color
