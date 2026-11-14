@@ -24,6 +24,11 @@
           <div><h2 id="library-title">Your library</h2><p id="library-count" class="muted">Loading documents…</p></div>
           <button id="refresh" class="button secondary" type="button">Refresh</button>
         </div>
+        <form id="search-form" role="search">
+          <label for="search-term">Search document contents</label>
+          <input id="search-term" type="search" placeholder="e.g. Hello">
+          <button class="button" type="submit">Search</button>
+        </form>
         <p id="library-status" class="message" role="status">Loading your library…</p>
         <div id="document-groups"></div>
       </section>

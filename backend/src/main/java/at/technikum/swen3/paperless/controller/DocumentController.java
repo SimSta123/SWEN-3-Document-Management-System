@@ -61,11 +61,20 @@ public class DocumentController {
         return service.createActualDocument(file, title == null ? filename : title);
     }
 
+
     @GetMapping("/documents")
-    public List<Document> listAllDocuments(HttpServletRequest httpRequest) {
+    public List<Document> listAllDocuments(@RequestParam(required = false) String search, HttpServletRequest httpRequest) throws IOException {
         httpRequest.setAttribute("logMessage", "Requesting to list all documents");
 
-        return service.listAllDocuments();
+        if (search == null || search.isBlank()) {
+            httpRequest.setAttribute("logMessage", "Requesting to list all documents");
+
+            return service.listAllDocuments();
+        }
+
+        httpRequest.setAttribute("logMessage", "Requesting to search documents");
+
+        return service.searchDocuments(search);
     }
 
     @GetMapping("/documents/{documentId}")

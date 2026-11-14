@@ -16,6 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -132,5 +134,30 @@ public class DefaultDocumentService implements DocumentService {
         elasticsearchClient.delete(documentId);
 
         documents.delete(document);
+    }
+
+    @Override
+    public List<Document> searchDocuments(String term) throws IOException {
+        if (term == null || term.isBlank()) {
+            return listAllDocuments();
+        }
+
+        List<Long> matchingIds = elasticsearchClient.search(term);
+
+        if (matchingIds.isEmpty()) {
+            return List.of();
+        }
+
+        var documentsById = documents.findAllById(matchingIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        DocumentEntity::getId,
+                        mapper::toDocument
+                ));
+
+        return matchingIds.stream()
+                .map(documentsById::get)
+                .filter(Objects::nonNull)
+                .toList();
     }
 }

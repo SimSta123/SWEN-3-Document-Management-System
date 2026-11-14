@@ -119,6 +119,9 @@ function startDashboard() {
   const assignmentProject = document.querySelector("#assignment-project");
   const assignDocument = document.querySelector("#assign-document");
   const assignmentStatus = document.querySelector("#assignment-status");
+  const searchForm = document.querySelector("#search-form");
+  const searchTerm = document.querySelector("#search-term");
+  let activeSearch = "";
   let assigning = false;
 
   function fillSelect(select, records, placeholder, label) {
@@ -133,6 +136,7 @@ function startDashboard() {
 
   async function loadLibrary() {
     const version = ++loadVersion;
+    const term = activeSearch;
     refresh.disabled = true;
     assignmentDocument.disabled = true;
     assignmentProject.disabled = true;
@@ -141,15 +145,27 @@ function startDashboard() {
     count.textContent = "Loading documents…";
     showMessage(status, "Loading your library…");
     try {
-      const [records, projects] = await Promise.all([api("/documents"), api("/projects")]);
+      const allDocuments = api("/documents");
+      const [allRecords, projects, records] = await Promise.all([
+        allDocuments,
+        api("/projects"),
+        term ? api(`/documents?search=${encodeURIComponent(term)}`) : allDocuments,
+      ]);
       if (version !== loadVersion) return;
-      fillSelect(assignmentDocument, records, records.length ? "Choose a document" : "No documents available", record => `${record.title} (#${record.id})`);
+      fillSelect(assignmentDocument, allRecords, allRecords.length ? "Choose a document" : "No documents available", record => `${record.title} (#${record.id})`);
       fillSelect(assignmentProject, projects, projects.length ? "Choose a project" : "Create a project first", project => `${project.name} (#${project.id})`);
-      assignDocument.disabled = assigning || !records.length || !projects.length;
-      count.textContent = `${records.length} document${records.length === 1 ? "" : "s"} · ${projects.length} project${projects.length === 1 ? "" : "s"}`;
-      showMessage(status, records.length ? "" : "Your library is empty. Add your first document to get started.");
+      assignDocument.disabled = assigning || !allRecords.length || !projects.length;
+      count.textContent = term
+        ? `${records.length} matching document${records.length === 1 ? "" : "s"}`
+        : `${records.length} document${records.length === 1 ? "" : "s"} · ${projects.length} project${projects.length === 1 ? "" : "s"}`;
+      showMessage(status, records.length ? "" : term
+        ? "No matching documents."
+        : "Your library is empty. Add your first document to get started.");
       for (const project of projects) {
-        addGroup(groups, project.name, records.filter(record => record.projectId === project.id), () => deleteProject(project));
+        const projectRecords = records.filter(record => record.projectId === project.id);
+        if (!term || projectRecords.length) {
+          addGroup(groups, project.name, projectRecords, () => deleteProject(project));
+        }
       }
       const unassigned = records.filter(record => record.projectId == null);
       if (unassigned.length) addGroup(groups, "Unassigned", unassigned);
@@ -263,6 +279,11 @@ function startDashboard() {
       title.disabled = false;
       title.focus();
     }
+  });
+  searchForm.addEventListener("submit", event => {
+    event.preventDefault();
+    activeSearch = searchTerm.value.trim();
+    loadLibrary();
   });
   refresh.addEventListener("click", loadLibrary);
   loadLibrary();
