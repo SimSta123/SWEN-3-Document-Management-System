@@ -11,4 +11,5 @@ public interface DocumentService {
     Document createActualDocument(MultipartFile multipartFile, String title) throws IOException;
     List<Document> listAllDocuments();
     Document getDocument(Long documentId);
+    void deleteDocument(Long documentId) throws IOException;
 }

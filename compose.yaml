@@ -140,6 +140,10 @@ services:
     build: ./backend
     environment:
       DB_URL: jdbc:postgresql://database:5432/paperless
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      ELASTICSEARCH_INDEX: ${ELASTICSEARCH_INDEX:-documents}
+      ELASTICSEARCH_USERNAME: elastic
+      ELASTICSEARCH_PASSWORD: ${ELASTIC_PASSWORD:?Set ELASTIC_PASSWORD in .env}
       DB_USER: paperless
       DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       RABBITMQ_HOST: rabbitmq

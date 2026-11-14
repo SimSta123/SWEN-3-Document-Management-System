@@ -1,6 +1,7 @@
 package at.technikum.swen3.paperless.service;
 
 import at.technikum.swen3.paperless.model.DocumentEntity;
+import at.technikum.swen3.paperless.model.ProjectEntity;
 import at.technikum.swen3.paperless.rabbitMQ.DocumentEventPublisher;
 import at.technikum.swen3.paperless.repository.DocumentRepository;
 import at.technikum.swen3.paperless.service.exception.InvalidInputException;
@@ -13,7 +14,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
 import java.util.List;
 
@@ -25,14 +25,15 @@ public class DefaultDocumentService implements DocumentService {
     private final ProjectMapper mapper;
     private final DocumentEventPublisher eventPublisher;
     private final DocumentStorage storeDocument;
+    private final ElasticsearchClient elasticsearchClient;
 
-
-    public DefaultDocumentService(DocumentRepository documents, ProjectMapper mapper, Logger logger, DocumentEventPublisher eventPublisher, DocumentStorage storeDocument) {
+    public DefaultDocumentService(DocumentRepository documents, ProjectMapper mapper, Logger logger, DocumentEventPublisher eventPublisher, DocumentStorage storeDocument, ElasticsearchClient elasticsearchClient) {
         this.documents = documents;
         this.logger = logger;
         this.eventPublisher = eventPublisher;
         this.mapper = mapper;
         this.storeDocument = storeDocument;
+        this.elasticsearchClient = elasticsearchClient;
     }
 
     @Override
@@ -115,5 +116,21 @@ public class DefaultDocumentService implements DocumentService {
 
         logger.debug("Fetched documentId={}", documentId);
         return documentGet;
+    }
+
+    @Override
+    @Transactional
+    public void deleteDocument(Long documentId) throws IOException{
+        DocumentEntity document = documents.findById(documentId).orElseThrow(() -> new NotFoundException("Document not found"));
+
+        String key = document.getObjectKey();
+
+        if (key != null) {
+            storeDocument.delete(key);
+        }
+
+        elasticsearchClient.delete(documentId);
+
+        documents.delete(document);
     }
 }

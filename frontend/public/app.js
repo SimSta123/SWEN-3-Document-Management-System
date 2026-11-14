@@ -7,6 +7,7 @@ async function api(path, options = {}) {
     error.status = response.status;
     throw error;
   }
+  if (response.status === 204) return;
   return response.json();
 }
 
@@ -22,7 +23,7 @@ function requestError(error, fallback) {
     : fallback;
 }
 
-function addGroup(container, name, records) {
+function addGroup(container, name, records, onDelete) {
   const group = document.createElement("details");
   group.className = "project-group";
   group.open = true;
@@ -34,6 +35,27 @@ function addGroup(container, name, records) {
   count.className = "group-count";
   count.textContent = records.length;
   summary.append(label, count);
+  if (onDelete) {
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "button delete-project";
+    deleteButton.textContent = "Delete";
+    deleteButton.setAttribute("aria-label", `Delete project ${name}`);
+    deleteButton.addEventListener("click", async event => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (deleteButton.disabled) return;
+      deleteButton.disabled = true;
+      deleteButton.textContent = "Deleting…";
+      try {
+        await onDelete();
+      } finally {
+        deleteButton.disabled = false;
+        deleteButton.textContent = "Delete";
+      }
+    });
+    summary.append(deleteButton);
+  }
   group.append(summary);
   if (!records.length) {
     const empty = document.createElement("p");
@@ -87,22 +109,47 @@ function startDashboard() {
   const pdfInput = document.querySelector("#pdf-file");
   const uploadButton = document.querySelector("#upload-button");
   const uploadStatus = document.querySelector("#upload-status");
+  const projectForm = document.querySelector("#project-form");
+  const projectName = document.querySelector("#project-name");
+  const projectDescription = document.querySelector("#project-description");
+  const createProject = document.querySelector("#create-project");
+  const projectStatus = document.querySelector("#project-status");
+  const assignmentForm = document.querySelector("#assignment-form");
+  const assignmentDocument = document.querySelector("#assignment-document");
+  const assignmentProject = document.querySelector("#assignment-project");
+  const assignDocument = document.querySelector("#assign-document");
+  const assignmentStatus = document.querySelector("#assignment-status");
+  let assigning = false;
+
+  function fillSelect(select, records, placeholder, label) {
+    const previous = select.value;
+    select.replaceChildren(new Option(placeholder, ""));
+    for (const record of records) select.add(new Option(label(record), String(record.id)));
+    if (records.some(record => String(record.id) === previous)) select.value = previous;
+    select.disabled = !records.length || assigning;
+  }
 
   let loadVersion = 0;
 
   async function loadLibrary() {
     const version = ++loadVersion;
     refresh.disabled = true;
+    assignmentDocument.disabled = true;
+    assignmentProject.disabled = true;
+    assignDocument.disabled = true;
     groups.replaceChildren();
     count.textContent = "Loading documents…";
     showMessage(status, "Loading your library…");
     try {
       const [records, projects] = await Promise.all([api("/documents"), api("/projects")]);
       if (version !== loadVersion) return;
+      fillSelect(assignmentDocument, records, records.length ? "Choose a document" : "No documents available", record => `${record.title} (#${record.id})`);
+      fillSelect(assignmentProject, projects, projects.length ? "Choose a project" : "Create a project first", project => `${project.name} (#${project.id})`);
+      assignDocument.disabled = assigning || !records.length || !projects.length;
       count.textContent = `${records.length} document${records.length === 1 ? "" : "s"} · ${projects.length} project${projects.length === 1 ? "" : "s"}`;
       showMessage(status, records.length ? "" : "Your library is empty. Add your first document to get started.");
       for (const project of projects) {
-        addGroup(groups, project.name, records.filter(record => record.projectId === project.id));
+        addGroup(groups, project.name, records.filter(record => record.projectId === project.id), () => deleteProject(project));
       }
       const unassigned = records.filter(record => record.projectId == null);
       if (unassigned.length) addGroup(groups, "Unassigned", unassigned);
@@ -114,6 +161,67 @@ function startDashboard() {
       if (version === loadVersion) refresh.disabled = false;
     }
   }
+
+  async function deleteProject(project) {
+    showMessage(projectStatus, `Deleting project "${project.name}"…`);
+    try {
+      await api(`/projects/${encodeURIComponent(project.id)}`, { method: "DELETE" });
+      showMessage(projectStatus, `Project "${project.name}" deleted. Its documents are now unassigned.`, "success");
+      await loadLibrary();
+    } catch (error) {
+      showMessage(projectStatus, requestError(error, "Could not confirm project deletion. Refresh the library before trying again."), "error");
+    }
+  }
+
+  projectForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    if (createProject.disabled) return;
+    const name = projectName.value.trim();
+    if (!name) {
+      showMessage(projectStatus, "Enter a project name.", "error");
+      projectName.focus();
+      return;
+    }
+    createProject.disabled = true;
+    projectName.disabled = true;
+    projectDescription.disabled = true;
+    showMessage(projectStatus, "Creating project…");
+    try {
+      await api("/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, description: projectDescription.value.trim() }),
+      });
+      projectForm.reset();
+      showMessage(projectStatus, "Project created. You can now assign documents to it.", "success");
+      await loadLibrary();
+    } catch (error) {
+      showMessage(projectStatus, requestError(error, "Could not confirm project creation. Refresh the library before trying again."), "error");
+    } finally {
+      createProject.disabled = false;
+      projectName.disabled = false;
+      projectDescription.disabled = false;
+    }
+  });
+
+  assignmentForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    if (assignDocument.disabled || !assignmentDocument.value || !assignmentProject.value) return;
+    assigning = true;
+    assignDocument.disabled = true;
+    assignmentDocument.disabled = true;
+    assignmentProject.disabled = true;
+    showMessage(assignmentStatus, "Assigning document…");
+    try {
+      await api(`/projects/${encodeURIComponent(assignmentProject.value)}/documents/${encodeURIComponent(assignmentDocument.value)}`, { method: "PUT" });
+      showMessage(assignmentStatus, "Document assigned to the project.", "success");
+    } catch (error) {
+      showMessage(assignmentStatus, requestError(error, "Could not confirm the assignment. Check the refreshed library before trying again."), "error");
+    } finally {
+      assigning = false;
+      await loadLibrary();
+    }
+  });
 
   title.addEventListener("input", () => {
     title.removeAttribute("aria-invalid");
@@ -194,10 +302,12 @@ function startDetail() {
   const status = document.querySelector("#detail-status");
   const details = document.querySelector("#document-details");
   const heading = document.querySelector("#document-heading");
+  const deleteButton = document.querySelector("#delete-document");
   const id = new URLSearchParams(window.location.search).get("id");
 
   async function loadDocument() {
     details.hidden = true;
+    deleteButton.hidden = true;
     if (!id || !/^[1-9]\d*$/.test(id)) {
       showMessage(status, "No valid document was selected. Go back to the dashboard and choose a document.", "error");
       refresh.hidden = true;
@@ -222,6 +332,7 @@ function startDetail() {
       document.querySelector("#detail-id").textContent = record.id;
       document.querySelector("#detail-project").textContent = projectName;
       details.hidden = false;
+      deleteButton.hidden = false;
       showMessage(status, "");
     } catch (error) {
       heading.textContent = error.status === 404 ? "Document not found" : "Document";
@@ -232,6 +343,22 @@ function startDetail() {
       refresh.disabled = false;
     }
   }
+  deleteButton.addEventListener("click", async () => {
+    if (deleteButton.disabled) return;
+    if (!window.confirm(`Delete document "${heading.textContent}"? This cannot be undone.`)) return;
+
+    deleteButton.disabled = true;
+    refresh.disabled = true;
+    showMessage(status, "Deleting document…");
+    try {
+      await api(`/documents/${encodeURIComponent(id)}`, { method: "DELETE" });
+      window.location.assign("/");
+    } catch (error) {
+      showMessage(status, requestError(error, "Could not confirm document deletion. Refresh the document before trying again."), "error");
+      deleteButton.disabled = false;
+      refresh.disabled = false;
+    }
+  });
   refresh.addEventListener("click", loadDocument);
   loadDocument();
 }

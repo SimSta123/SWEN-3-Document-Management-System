@@ -74,4 +74,16 @@ public class DocumentController {
 
         return service.getDocument(documentId);
     }
+
+    @DeleteMapping("/documents/{documentId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteDocument(@PathVariable Long documentId, HttpServletRequest httpRequest) {
+        httpRequest.setAttribute("logMessage", "Requesting to delete document with id: %s".formatted(documentId));
+
+        try {
+            service.deleteDocument(documentId);
+        } catch (Exception e) {
+            throw new InvalidInputException("DocumentID error");
+        }
+    }
 }

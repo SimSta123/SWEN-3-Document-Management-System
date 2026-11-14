@@ -28,6 +28,29 @@
         <div id="document-groups"></div>
       </section>
       <aside>
+        <section class="panel" aria-labelledby="project-title">
+          <h2 id="project-title">Create a project</h2>
+          <form id="project-form">
+            <label for="project-name">Project name</label>
+            <input id="project-name" name="name" required maxlength="200" placeholder="e.g. SWEN3">
+            <label for="project-description">Description (optional)</label>
+            <textarea id="project-description" name="description" maxlength="2000" rows="3"></textarea>
+            <button id="create-project" class="button" type="submit">Create project</button>
+            <p id="project-status" class="message" role="status" hidden></p>
+          </form>
+        </section>
+        <section class="panel" aria-labelledby="assignment-title">
+          <h2 id="assignment-title">Assign a document</h2>
+          <p class="muted">Choose a project for a document. This replaces its current project.</p>
+          <form id="assignment-form">
+            <label for="assignment-document">Document</label>
+            <select id="assignment-document" required disabled></select>
+            <label for="assignment-project">Project</label>
+            <select id="assignment-project" required disabled></select>
+            <button id="assign-document" class="button" type="submit" disabled>Assign document</button>
+            <p id="assignment-status" class="message" role="status" hidden></p>
+          </form>
+        </section>
         <section class="panel" aria-labelledby="add-title">
           <p class="eyebrow">START SOMETHING NEW</p>
           <h2 id="add-title">Add a document</h2>

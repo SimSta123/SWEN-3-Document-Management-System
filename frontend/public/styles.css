@@ -18,7 +18,7 @@ a {
     color: #23634a;
 }
 
-button, input {
+button, input, select, textarea {
     font: inherit;
 }
 
@@ -166,6 +166,27 @@ h2 {
     cursor: wait;
 }
 
+.button.delete-project {
+    flex-shrink: 0;
+    padding: 5px 9px;
+    border-color: #e6c7be;
+    background: #fcf0ec;
+    color: #943d29;
+    font-size: 12px;
+}
+
+.button.delete-project:hover {
+    background: #f7dfd7;
+}
+
+.button.danger {
+    background: #943d29;
+}
+
+.button.danger:hover {
+    background: #78301f;
+}
+
 label {
     display: block;
     margin: 24px 0 8px;
@@ -173,7 +194,7 @@ label {
     font-weight: 600;
 }
 
-input {
+input, select, textarea {
     width: 100%;
     border: 1px solid #cdd7ca;
     background: #fcfdfb;
@@ -185,6 +206,10 @@ input {
 input::placeholder {
     color: #839080;
 }
+
+textarea { resize: vertical; }
+aside > .panel + .panel { margin-top: 24px; }
+#project-form .button, #assignment-form .button { margin-top: 20px; }
 
 input[aria-invalid="true"] {
     border-color: #a64d38;
