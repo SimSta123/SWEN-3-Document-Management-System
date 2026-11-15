@@ -77,7 +77,7 @@ In the backend, controllers handle HTTP requests, services handle the logic and 
 
 The dashboard groups documents by project, with an Unassigned group for documents without a project. We can create projects, save a document title, upload a PDF and move documents between projects. A document's detail page shows its title, ID and project. Empty lists, failed requests and missing documents have their own messages.
 
-Search looks through the OCR text in Elasticsearch and shows the matching documents. A new upload becomes searchable after the worker finishes processing it. Deleting a project leaves its documents unassigned. Deleting a document removes its database record, PDF and search entry. Queued or running OCR jobs cannot bring a successfully deleted document back; see [deletion behaviour and tests](docs/DELETION.md).
+Search looks through the OCR text in Elasticsearch and shows the matching documents. A new upload becomes searchable after the worker finishes processing it. Deleting a project leaves its documents unassigned. Deleting a document removes its database record, PDF and search entry. Queued or running OCR jobs cannot bring a successfully deleted document back.
 
 The table below uses the backend paths. When calling through nginx, add `/api`, for example `/api/documents`.
 
@@ -126,6 +126,12 @@ The OCR result goes to `document.ocr.completed` as persistent JSON:
 The indexer creates the index if needed and writes with `refresh=wait_for`. It acknowledges the result message after Elasticsearch accepts the entry and makes it visible to search. The search API can use the stored `documentId` to look up the document's title and metadata.
 
 `OCR_QUEUE`, `OCR_RESULT_QUEUE` and `ELASTICSEARCH_INDEX` change the default queue and index names. The worker also supports `TESSERACT_COMMAND`, `OCR_LANGUAGE` and `OCR_PAGE_TIMEOUT` in its environment. Other OCR languages need their trained data installed in the image.
+
+### Deleting a document during processing
+
+The worker checks that the document still exists before downloading its PDF and after OCR. Deletion and indexing also lock the same PostgreSQL record. If indexing finishes first, deletion removes its result. If deletion finishes first, the worker skips the old result. Upload messages only become available after the new database record commits.
+
+The database, RustFS and Elasticsearch do not share one transaction. If deletion fails partway through, some external data may already be gone; the request returns an error and deletion can be retried. Failed worker messages stay in the failed queues for manual inspection.
 
 ### Failed messages
 
