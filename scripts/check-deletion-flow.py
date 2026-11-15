@@ -223,10 +223,15 @@ try:
     wait_for(recognition_started, "Tesseract to start on the downloaded PDF")
     delete(document_id, key)
     subprocess.run(["docker", "exec", worker_name, "touch", "/tmp/deletion-ocr-resume"], check=True, timeout=10)
+
+    def recognition_discarded():
+        output = subprocess.run(["docker", "logs", worker_name], check=True,
+                                capture_output=True, text=True, timeout=10)
+        return f"Discarded OCR for deleted document: documentId={document_id}" in output.stdout + output.stderr
+
+    wait_for(recognition_discarded, "this document's actual OCR completion and discard")
     wait_for(queues_idle, "OCR to finish and discard its result")
     assert_deleted(document_id, key)
-    logs = subprocess.run(["docker", "logs", worker_name], check=True, capture_output=True, text=True).stdout
-    assert f"Discarded OCR for deleted document: documentId={document_id}" in logs
 finally:
     subprocess.run(["docker", "rm", "--force", worker_name], capture_output=True, timeout=30)
     compose("start", "ocr-worker")
