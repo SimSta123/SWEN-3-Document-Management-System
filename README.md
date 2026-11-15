@@ -8,7 +8,9 @@ Yann Polini and Simon Stangelberger
 
 This is our document management system for SWEN3. We can upload PDFs, save document records and organise them into projects. A document belongs to one project at a time. Assigning it to another project moves it there.
 
-On `sprint-4`, uploaded PDFs are stored in RustFS. A worker reads them with Tesseract and stores the extracted text in Elasticsearch. The backend and frontend search feature is still tracked in #46.
+Uploaded PDFs are stored in RustFS. A separate worker reads them with Tesseract and stores the extracted text in Elasticsearch. We can search that text through the website and open the matching documents.
+
+The local code walkthrough is maintained separately in CodeAtlas. Open `output/swen3-atlas.html` from the CodeAtlas folder.
 
 ## Run the project
 
@@ -60,6 +62,7 @@ flowchart LR
     RustFS --> OCR
     OCR --> Results[RabbitMQ result queue] --> Indexer
     Indexer --> Elasticsearch[(Elasticsearch)]
+    Backend -->|Search| Elasticsearch
     Logstash --> Elasticsearch
     Kibana --> Elasticsearch
 ```
@@ -72,7 +75,9 @@ In the backend, controllers handle HTTP requests, services handle the logic and 
 
 ## Website and API
 
-The dashboard groups documents by project, with an Unassigned group for documents without a project. We can save a title, upload a PDF and open a document's detail page to see its title, ID and project. Empty lists, failed requests and missing documents have their own messages.
+The dashboard groups documents by project, with an Unassigned group for documents without a project. We can create projects, save a document title, upload a PDF and move documents between projects. A document's detail page shows its title, ID and project. Empty lists, failed requests and missing documents have their own messages.
+
+Search looks through the OCR text in Elasticsearch and shows the matching documents. A new upload becomes searchable after the worker finishes processing it. Deleting a project leaves its documents unassigned. Deleting a document removes its database record, PDF and search entry. Queued or running OCR jobs cannot bring a successfully deleted document back; see [deletion behaviour and tests](docs/DELETION.md).
 
 The table below uses the backend paths. When calling through nginx, add `/api`, for example `/api/documents`.
 
@@ -80,9 +85,12 @@ The table below uses the backend paths. When calling through nginx, add `/api`, 
 | --- | --- | --- |
 | POST | `/projects` | Create a project |
 | GET | `/projects` | List projects |
+| DELETE | `/projects/{projectId}` | Delete a project and leave its documents unassigned |
 | POST | `/documents` | Create a record from JSON or upload a multipart PDF |
 | GET | `/documents` | List all documents |
+| GET | `/documents?search=Hello` | Find documents whose OCR text matches the search |
 | GET | `/documents/{documentId}` | Read a document |
+| DELETE | `/documents/{documentId}` | Delete a document, its PDF and its search entry |
 | PUT | `/projects/{projectId}/documents/{documentId}` | Assign or move a document |
 | GET | `/projects/{projectId}/documents` | List a project's documents |
 
@@ -151,19 +159,20 @@ Backend unit tests use JUnit and Mockito for service logic. HTTP integration tes
 
 The Docker builds run the Java tests. With JDK 25 installed, you can also run `./mvnw verify` from `backend/` or `ocr-worker/`. On Windows, use `.\mvnw.cmd verify`. Backend coverage is written to `backend/target/site/jacoco/index.html`.
 
-On 13 November 2026, 66 backend tests and 44 worker tests passed. Worker tests include actual Tesseract recognition of a two-page image-only PDF, message validation and Elasticsearch HTTP behaviour. [GitHub CI](.github/workflows/ci.yml) also passed the full Compose startup and the checks below on `sprint-4`.
+On 15 November 2026, 69 backend tests and 55 worker tests passed. Worker tests include actual Tesseract recognition of a two-page image-only PDF, message validation, Elasticsearch HTTP behaviour and deletion/indexing races. [GitHub CI](.github/workflows/ci.yml) also passed the full Compose startup, the checks below and the deletion lock tests against PostgreSQL.
 
 | Script | What it checks |
 | --- | --- |
 | `python scripts/check-ocr-worker.py` | Message logs, acknowledgements and failed-message routing |
 | `python scripts/check-ocr-flow.py` | PDF upload, RustFS retrieval, OCR, Elasticsearch search, repeated delivery and invalid results |
 | `python scripts/check-elk.py` | Kibana availability and a Logstash event arriving in Elasticsearch |
+| `python scripts/check-deletion-flow.py` | Deletion from all three stores, queued jobs, redelivery and OCR finishing after deletion |
 
-Use a disposable test stack. These scripts create test data and read failed messages. Set `RABBITMQ_PASSWORD` and `ELASTIC_PASSWORD` in your shell to match that stack. The OCR flow check uses `API_URL`, defaulting to `http://localhost:8081`; CI sets it to the nginx API address.
+Use a disposable test stack. These scripts create test data and read failed messages; the deletion check also temporarily stops and restarts that stack's worker. Set `RABBITMQ_PASSWORD` and `ELASTIC_PASSWORD` in your shell to match that stack. The deletion check also needs `RUSTFS_ACCESS_KEY` and `RUSTFS_SECRET_KEY`. The OCR and deletion flow checks use `API_URL`, defaulting to `http://localhost:8081`; CI sets it to the nginx API address.
 
 The checks support `RABBITMQ_MANAGEMENT_URL`, `ELASTICSEARCH_URL`, `ELASTICSEARCH_INDEX`, `KIBANA_URL` and `LOGSTASH_URL` for other addresses. They also accept `ELASTICSEARCH_PASSWORD` in place of `ELASTIC_PASSWORD`. The worker checks use the configured queue names. The Elasticsearch checks wait through temporary 404/503 responses while the first index shards start, then fail if the data does not appear in time.
 
-The automated Hello search calls Elasticsearch directly. The required upload and search through the actual website still need the complete search feature and the final Sprint 4 check in #47.
+The automated OCR flow check searches Elasticsearch directly. We also checked the required website flow on 15 November 2026: uploaded an image-only `HelloWorld.pdf` at `http://localhost/`, searched for `Hello` and saw `HelloWorld.pdf` in the results. A search for unrelated text returned no matches. `docker compose build` and the full stack startup both passed.
 
 ## Code and references
 
