@@ -1,137 +1,190 @@
 # SWEN3 Document Management System
 
 Software Engineering 3 Labor, WS 2026, Group G
+
 Yann Polini and Simon Stangelberger
 
-[Repository](https://github.com/SimSta123/SWEN-3-Document-Management-System) | [Kanban board](https://github.com/users/YannPolini/projects/4) | [Milestones](https://github.com/SimSta123/SWEN-3-Document-Management-System/milestones)
+[Repository](https://github.com/SimSta123/SWEN-3-Document-Management-System) · [Kanban board](https://github.com/users/YannPolini/projects/4) · [Milestones](https://github.com/SimSta123/SWEN-3-Document-Management-System/milestones)
 
-This is our document management system for SWEN3. We can save document titles, list them on a dashboard and open their details. We can also post a PDF to the API, which sends a message to the worker. Our additional use case is organising documents into projects. Each document belongs to one project at a time, and assigning it to another project moves it there.
+This is our document management system for SWEN3. We can upload PDFs, save document records and organise them into projects. A document belongs to one project at a time. Assigning it to another project moves it there.
 
-We use `sprint-3` for the current sprint and midterm review. It includes the earlier midterm work, PDF upload through REST, RabbitMQ and an empty OCR worker. `mid-term-code-review` is the older version. File storage, actual OCR and search come in Sprint 4.
+Uploaded PDFs are stored in RustFS. A separate worker reads them with Tesseract and stores the extracted text in Elasticsearch. We can search that text through the website and open the matching documents.
 
-## How our project works
-
-We use HTML, CSS and JavaScript for the website, nginx for the web server, Java 25 with Spring Boot 4.1.1 for the backend, and PostgreSQL 17 for storage. We build the backend with Maven.
-
-```mermaid
-flowchart LR
-    Browser[Browser] --> Web[nginx]
-    subgraph Backend[Spring Boot backend]
-        Controller[ProjectController] --> Service[DefaultProjectService]
-        DocumentController --> DocumentService[DefaultDocumentService]
-        DocumentService --> Repository
-        DocumentService --> Mapper
-        DocumentService --> Publisher[DocumentEventPublisher]
-        Service --> Repository[JPA repositories]
-        Service --> Mapper[MapStruct]
-        Mapper --> Records[Project and Document response records]
-    end
-    Web -->|/api requests| Controller
-    Web -->|/api/documents| DocumentController
-    Repository --> Database[(PostgreSQL)]
-    Publisher --> RabbitMQ --> Worker[Empty OCR worker]
-```
-
-When we save a title or upload a PDF, the request goes through nginx to `DocumentController`. It calls `DocumentService`, implemented by `DefaultDocumentService`. The service validates and saves a `DocumentEntity`, then publishes a document-created message to RabbitMQ. MapStruct converts the entity into the `Document` record returned as JSON. Project creation and document assignment use `ProjectController` and `DefaultProjectService`.
-
-The main parts are:
-
-- We separate request handling, business logic and database access. The service interface lets us test business logic separately.
-- We use Spring to inject the service, repositories, mapper and logger through constructors.
-- Spring Data JPA handles the database access. Flyway creates the tables, and Hibernate checks that they match our entities.
-- We use MapStruct to keep database entities separate from the records returned by the API.
-- We use nginx to serve the website and forward API requests. It removes `/api/` before forwarding them to the backend.
-
-The main code is in [controllers](backend/src/main/java/at/technikum/swen3/paperless/controller), [services](backend/src/main/java/at/technikum/swen3/paperless/service), [entities](backend/src/main/java/at/technikum/swen3/paperless/model), [repositories](backend/src/main/java/at/technikum/swen3/paperless/repository) and [migrations](backend/src/main/resources/db/migration).
+The local code walkthrough is maintained separately in CodeAtlas. Open `output/swen3-atlas.html` from the CodeAtlas folder.
 
 ## Run the project
 
 You need Docker Desktop with Linux containers enabled.
 
-1. Copy `.env.example` to `.env` and set `POSTGRES_PASSWORD` and `RABBITMQ_PASSWORD`.
-2. From the project folder, run:
+1. Copy `.env.example` to `.env`.
+2. Set the database and RabbitMQ passwords, the RustFS access keys, `ELASTIC_PASSWORD` and `KIBANA_PASSWORD`.
+3. Run this from the project folder:
 
    ```sh
    docker compose up --build --detach --wait
    ```
 
-3. Open [localhost](http://localhost/) for the website. The API uses [localhost:8081](http://localhost:8081) by default.
+4. Open [localhost](http://localhost/) for the website.
 
-We can change the default ports with `WEB_PORT` and `API_PORT` in `.env`. PostgreSQL is only reachable inside Docker.
+The first build takes a while because it downloads the images and builds both Java applications. The `kibana-setup` container should finish and exit successfully. It only sets up Kibana's service account; the other services keep running.
 
-We stop the services with `docker compose down`, which keeps the database volume. We keep `.env` out of Git. Changing its password does not update an existing database volume.
+| Service | Default address | Login |
+| --- | --- | --- |
+| Website | http://localhost/ | None |
+| Backend API | http://localhost:8081 | None |
+| RabbitMQ management | http://localhost:15672 | `paperless` / `RABBITMQ_PASSWORD` |
+| RustFS console | http://localhost:9001 | RustFS access keys |
+| Elasticsearch | http://localhost:9200 | `elastic` / `ELASTIC_PASSWORD` |
+| Kibana | http://localhost:5601 | `elastic` / `ELASTIC_PASSWORD` |
+| Logstash JSON input | http://localhost:18080 | None |
+
+Passwords and keys come from your `.env`. `KIBANA_PASSWORD` is for the internal `kibana_system` account, not the Kibana website login. RustFS uses port 9000 for its S3 API.
+
+You can change the website, backend and Elastic ports with `WEB_PORT`, `API_PORT`, `ELASTICSEARCH_PORT`, `KIBANA_PORT` and `LOGSTASH_PORT`. PostgreSQL is only reachable inside Docker. Published service ports are bound to localhost. Elasticsearch uses HTTP with password authentication for this local setup.
+
+Run `docker compose down` to stop the project. This keeps the stored data in Docker volumes. Keep `.env` out of Git. Changing `POSTGRES_PASSWORD` in the file does not change the password in an existing database volume.
+
+## How it works
+
+The website uses HTML, CSS and JavaScript, served by nginx. The backend uses Java 25, Spring Boot 4.1.1 and Maven. PostgreSQL 17 stores document metadata and projects. RustFS stores the actual PDF files; it is our replacement for the MinIO named in the sprint slide.
+
+```mermaid
+flowchart LR
+    Browser --> nginx --> Backend[REST backend]
+    Backend --> PostgreSQL[(PostgreSQL)]
+    Backend --> RustFS[(RustFS PDFs)]
+    Backend --> Uploads[RabbitMQ upload queue]
+    subgraph Worker[Separate worker application]
+        OCR[Tesseract OCR]
+        Indexer[Indexing listener]
+    end
+    Uploads --> OCR
+    RustFS --> OCR
+    OCR --> Results[RabbitMQ result queue] --> Indexer
+    Indexer --> Elasticsearch[(Elasticsearch)]
+    Backend -->|Search| Elasticsearch
+    Logstash --> Elasticsearch
+    Kibana --> Elasticsearch
+```
+
+For a PDF upload, the backend stores the file in RustFS and its metadata in PostgreSQL. It sends the document ID and storage key to RabbitMQ. The upload request can then finish while the worker processes the file separately.
+
+The worker downloads the original PDF, converts every page to an image with PDFBox and runs Tesseract on those images. It sends the extracted text and document ID to a second RabbitMQ queue. The indexing listener reads that result and saves it in Elasticsearch. Both listeners run in the same worker application, which is separate from the REST backend.
+
+In the backend, controllers handle HTTP requests, services handle the logic and repositories access the database. Spring injects these dependencies through constructors. MapStruct converts database entities into API response records. Flyway creates the tables, and Hibernate checks them against the entities. nginx forwards `/api/` requests to the backend and removes that prefix.
 
 ## Website and API
 
-Our [dashboard](frontend/public/index.html) groups documents by project, including Unassigned. We can add a title and open the [detail page](frontend/public/document.html) to see its title, ID and project. We show messages for empty lists, failed requests and missing documents.
+The dashboard groups documents by project, with an Unassigned group for documents without a project. We can create projects, save a document title, upload a PDF and move documents between projects. A document's detail page shows its title, ID and project. Empty lists, failed requests and missing documents have their own messages.
 
-We check titles in the website and validate requests in the API. The service checks inputs too, so these checks also apply when it is called directly. Blank names or titles, values over the length limits and invalid IDs are rejected. Missing records return 404. The request filter logs requests, and the service logs its operations and rejected inputs. Service DEBUG logging is enabled in [application.properties](backend/src/main/resources/application.properties).
+Search looks through the OCR text in Elasticsearch and shows the matching documents. A new upload becomes searchable after the worker finishes processing it. Deleting a project leaves its documents unassigned. Deleting a document removes its database record, PDF and search entry. Queued or running OCR jobs cannot bring a successfully deleted document back; see [deletion behaviour and tests](docs/DELETION.md).
 
-Our [request examples](requests/projects.http) cover this flow. We use the returned IDs in later requests.
+The table below uses the backend paths. When calling through nginx, add `/api`, for example `/api/documents`.
 
 | Method | Endpoint | Action |
 | --- | --- | --- |
 | POST | `/projects` | Create a project |
 | GET | `/projects` | List projects |
-| POST | `/documents` | Create a document record from JSON, or accept a multipart PDF upload |
-| GET | `/documents` | List all document records, including unassigned ones |
-| GET | `/documents/{documentId}` | Read one document record, or return 404 |
+| DELETE | `/projects/{projectId}` | Delete a project and leave its documents unassigned |
+| POST | `/documents` | Create a record from JSON or upload a multipart PDF |
+| GET | `/documents` | List all documents |
+| GET | `/documents?search=Hello` | Find documents whose OCR text matches the search |
+| GET | `/documents/{documentId}` | Read a document |
+| DELETE | `/documents/{documentId}` | Delete a document, its PDF and its search entry |
 | PUT | `/projects/{projectId}/documents/{documentId}` | Assign or move a document |
 | GET | `/projects/{projectId}/documents` | List a project's documents |
 
-Our [health requests](requests/health.http) check the backend and database connection.
+See [project and document requests](requests/projects.http) and [health requests](requests/health.http) for examples.
 
-### Post a PDF for Sprint 3
+### Upload a PDF
 
-Send the PDF as a multipart `file` field. You can also set a `title`, otherwise we use the filename. Files can be up to 10 MiB. Empty files and files without a `%PDF-` header return 400. We only check the header, we do not parse the PDF yet.
+Use the website's PDF upload form, or send a multipart request with a `file` field. The API also accepts an optional `title`; otherwise it uses the filename.
 
 ```sh
 curl --fail-with-body -F "file=@/path/to/notes.pdf;type=application/pdf" -F "title=Course notes" http://localhost/api/documents
 docker compose logs --since 1m ocr-worker
 ```
 
-On Windows use `curl.exe` and replace the file path with your PDF's path. You can also call the backend directly at `http://localhost:8081/documents`, using your `API_PORT` if you changed it. The response should be 201 with the new document ID. Look for `Received upload for OCR: Document created: <id>` in the worker logs. The website still uses the title form.
+On Windows, use `curl.exe` and replace the path with your PDF's path. The response should be 201 with the new document ID. After processing, the worker logs `OCR completed: documentId=<id>`.
 
-For now, we check the uploaded PDF but only save its title. The file is discarded after the request. RabbitMQ gets the document ID in a text message. Saving the actual file and running OCR come in Sprint 4.
+Uploads are limited to 10 MiB. The REST endpoint rejects empty files and files without a `%PDF-` header. It only checks the header; the worker parses the PDF later. Creating a record from a JSON title still works, but that record has no PDF to process.
 
-## Failure handling
+## OCR and indexing
 
-The service uses `InvalidInputException` for invalid values and `NotFoundException` for missing records. [ApiExceptionHandler](backend/src/main/java/at/technikum/swen3/paperless/controller/ApiExceptionHandler.java) turns these into 400 and 404 responses. It also handles invalid JSON and invalid request parameters. Errors use a JSON problem response with a status and detail.
+The upload queue is `document.uploaded`. A stored PDF produces a message like `Document created: 42 with key: <objectKey>`. The worker uses the key to fetch the PDF from the same `documents` bucket as the backend.
 
-Database conflicts return 409, unavailable connections and temporary database failures return 503, and other failures return 500. The full error goes in the logs. The API returns a short message without SQL or connection details.
+[PdfOcr](ocr-worker/src/main/java/at/technikum/swen3/worker/PdfOcr.java) renders every page at 300 DPI and runs Tesseract with English language data. Tesseract is installed in the worker image, so it does not need to be installed on the host. Temporary PDFs and page images are removed after processing. Each page has a 60-second timeout.
 
-## OCR worker
+The OCR result goes to `document.ocr.completed` as persistent JSON:
 
-The [worker](ocr-worker/src/main/java/at/technikum/swen3/worker/UploadListener.java) runs in its own container. It receives upload messages from RabbitMQ and logs them. It does not read PDFs or run OCR yet.
+```json
+{"documentId":42,"text":"Hello World"}
+```
 
-We use a durable queue called `document.uploaded`. Set `OCR_QUEUE` to change it. The worker declares the queue when it connects. Spring acknowledges each message after the listener returns. Blank messages and invalid UTF-8 are rejected with `InvalidUploadMessageException`. Rejected messages go to the durable `document.uploaded.failed` queue. Other listener failures go there too, so a bad message does not get retried forever. The failed queue has no consumer. We can inspect it in RabbitMQ. Spring reconnects the listener if the broker goes offline.
+[IndexingListener](ocr-worker/src/main/java/at/technikum/swen3/worker/IndexingListener.java) checks the result and passes it to [ElasticsearchIndexer](ocr-worker/src/main/java/at/technikum/swen3/worker/ElasticsearchIndexer.java). The `documents` index stores `documentId` as `long` and the extracted `text` as searchable text. Its Elasticsearch ID matches the document ID in PostgreSQL. Processing the same result again replaces the entry instead of creating a duplicate.
 
-The backend sends `Document created: <id>` through the default exchange (`""`), using the queue name as the routing key. The worker just logs the message. The queue uses `x-dead-letter-exchange=""` and `x-dead-letter-routing-key="document.uploaded.failed"`. With another `OCR_QUEUE`, the failed queue is that name plus `.failed`.
+The indexer creates the index if needed and writes with `refresh=wait_for`. It acknowledges the result message after Elasticsearch accepts the entry and makes it visible to search. The search API can use the stored `documentId` to look up the document's title and metadata.
 
-If you have an older queue without these failed-message settings, RabbitMQ will reject the changed arguments. Use a new `OCR_QUEUE` for testing, or drain the old queue before recreating it. Do not delete queued uploads.
+`OCR_QUEUE`, `OCR_RESULT_QUEUE` and `ELASTICSEARCH_INDEX` change the default queue and index names. The worker also supports `TESSERACT_COMMAND`, `OCR_LANGUAGE` and `OCR_PAGE_TIMEOUT` in its environment. Other OCR languages need their trained data installed in the image.
 
-Run `docker compose logs -f ocr-worker` to see received messages. RabbitMQ's management page is at [localhost:15672](http://localhost:15672/), with user `paperless` and the password from `.env`.
+### Failed messages
 
-The listener follows the [Spring AMQP example](https://docs.spring.io/spring-amqp/reference/amqp/receiving-messages/async-annotation-driven.html) and [exception handling docs](https://docs.spring.io/spring-amqp/reference/amqp/exception-handling.html). We used Codex to help with the worker, failure handling and checks.
+Both RabbitMQ queues are durable. Failed upload processing goes to `document.uploaded.failed`; invalid OCR results and indexing failures go to `document.ocr.completed.failed`. These queues have no consumer, so we can inspect or manually retry the messages instead of retrying a bad message forever. Changing a queue name also changes its failed queue to that name plus `.failed`.
 
-## Tests
+Blank or invalid UTF-8 upload messages are rejected. Older metadata-only messages and the text/JSON test messages are still logged, but do not start OCR because they have no storage key. Spring acknowledges messages after successful processing and reconnects if RabbitMQ goes offline.
 
-We use JUnit and Mockito with mocked repositories and mapping to test valid/invalid inputs, length limits, missing records and assignment. These tests do not use our PostgreSQL database.
+An older local queue may exist without the failed-message settings. RabbitMQ will reject the new arguments for that queue. Drain its pending messages before recreating it, or use a new queue name for testing. Do not delete queued uploads or OCR results.
 
-Our Spring Boot tests use real HTTP requests and an H2 database. They cover startup, health, document creation, reads and PDF uploads. RabbitMQ is mocked in these tests. We check the running app separately with PostgreSQL and RabbitMQ.
+Use `docker compose logs -f ocr-worker` for worker logs and the RabbitMQ management page to inspect queues.
 
-The Docker build runs our tests. With JDK 25 installed, we can also run `./mvnw verify` from `backend/`, or `.\mvnw.cmd verify` on Windows. JaCoCo writes the coverage report to `backend/target/site/jacoco/index.html`.
+## RustFS and ELK
 
-On 1 November 2026, all 66 backend tests and 7 worker tests passed. Backend coverage was 93.27% for lines and 93.10% for branches. These figures include unit and HTTP integration tests.
+Compose starts RustFS, the worker, Elasticsearch, Logstash and Kibana alongside the database, RabbitMQ, backend and frontend. The backend and worker wait for RustFS readiness. The worker and Logstash wait for Elasticsearch, and Kibana waits for its account setup to finish.
 
-Our [CI workflow](.github/workflows/ci.yml) runs the backend tests and starts the Compose stack. The worker build runs its own unit tests. [The worker check](scripts/check-ocr-worker.py) sends text and JSON messages, checks the logs and acknowledgements, and checks that blank or invalid UTF-8 messages go to the failed queue.
+Elasticsearch, Logstash and Kibana all use version 9.5.6. Their stored data uses Docker volumes. Elasticsearch runs as a single node.
 
-To run the worker check locally, set `RABBITMQ_PASSWORD` in your shell to match the stack and run `python scripts/check-ocr-worker.py`. It uses `OCR_QUEUE` if set. Use a separate test stack because the script reads messages from the failed queue. For the full PDF-to-worker check, use the upload and log commands above.
+The [Logstash pipeline](docker/elk/logstash.conf) accepts JSON over HTTP, keeps a persistent queue and writes events to `paperless-logs-*` in Elasticsearch. Kibana connects to Elasticsearch so we can inspect the data. This is a simple ELK connection setup; it does not collect every application's logs automatically. OCR text is stored separately in `documents`.
 
-## Our work and lessons learned
+## Validation and API errors
 
-We started with the API and project grouping, then added the website, validation, logging and tests. Sprint 3 adds RabbitMQ, the empty worker and the PDF endpoint. Our tasks are on the board linked at the top.
+The website checks document titles. The API and service validate titles, project names and IDs. The service checks also apply when it is called directly. Blank values, values over the length limits and invalid IDs are rejected.
 
-One thing we ran into was nginx forwarding the wrong path. Removing `/api/` fixed that. We also had to put validation in the service, since frontend and API validation do not cover direct service calls. For test coverage we check the JaCoCo report as well as the test results.
+[ApiExceptionHandler](backend/src/main/java/at/technikum/swen3/paperless/controller/ApiExceptionHandler.java) returns JSON problem responses: 400 for invalid input, 404 for missing records, 409 for database conflicts and 503 for temporary database failures. Other failures return 500. Full errors stay in the logs; responses do not include SQL or connection details.
 
-We work on sprint branches and merge into `main` after checking the whole app. Previous merges are in the [pull requests](https://github.com/SimSta123/SWEN-3-Document-Management-System/pulls?q=is%3Apr+is%3Amerged). We both go through the code before the review.
+The request filter logs HTTP requests. Services log their operations and rejected inputs. Service DEBUG logging is configured in [application.properties](backend/src/main/resources/application.properties).
+
+## Tests and checks
+
+Backend unit tests use JUnit and Mockito for service logic. HTTP integration tests run against H2 with RabbitMQ mocked. We check PostgreSQL, RabbitMQ, RustFS and Elasticsearch separately in the running Compose stack.
+
+The Docker builds run the Java tests. With JDK 25 installed, you can also run `./mvnw verify` from `backend/` or `ocr-worker/`. On Windows, use `.\mvnw.cmd verify`. Backend coverage is written to `backend/target/site/jacoco/index.html`.
+
+On 15 November 2026, 69 backend tests and 55 worker tests passed. Worker tests include actual Tesseract recognition of a two-page image-only PDF, message validation, Elasticsearch HTTP behaviour and deletion/indexing races. [GitHub CI](.github/workflows/ci.yml) also passed the full Compose startup, the checks below and the deletion lock tests against PostgreSQL.
+
+| Script | What it checks |
+| --- | --- |
+| `python scripts/check-ocr-worker.py` | Message logs, acknowledgements and failed-message routing |
+| `python scripts/check-ocr-flow.py` | PDF upload, RustFS retrieval, OCR, Elasticsearch search, repeated delivery and invalid results |
+| `python scripts/check-elk.py` | Kibana availability and a Logstash event arriving in Elasticsearch |
+| `python scripts/check-deletion-flow.py` | Deletion from all three stores, queued jobs, redelivery and OCR finishing after deletion |
+
+Use a disposable test stack. These scripts create test data and read failed messages; the deletion check also temporarily stops and restarts that stack's worker. Set `RABBITMQ_PASSWORD` and `ELASTIC_PASSWORD` in your shell to match that stack. The deletion check also needs `RUSTFS_ACCESS_KEY` and `RUSTFS_SECRET_KEY`. The OCR and deletion flow checks use `API_URL`, defaulting to `http://localhost:8081`; CI sets it to the nginx API address.
+
+The checks support `RABBITMQ_MANAGEMENT_URL`, `ELASTICSEARCH_URL`, `ELASTICSEARCH_INDEX`, `KIBANA_URL` and `LOGSTASH_URL` for other addresses. They also accept `ELASTICSEARCH_PASSWORD` in place of `ELASTIC_PASSWORD`. The worker checks use the configured queue names. The Elasticsearch checks wait through temporary 404/503 responses while the first index shards start, then fail if the data does not appear in time.
+
+The automated OCR flow check searches Elasticsearch directly. We also checked the required website flow on 15 November 2026: uploaded an image-only `HelloWorld.pdf` at `http://localhost/`, searched for `Hello` and saw `HelloWorld.pdf` in the results. A search for unrelated text returned no matches. `docker compose build` and the full stack startup both passed.
+
+## Code and references
+
+- [Backend](backend/src/main/java/at/technikum/swen3/paperless): controllers, services, entities and repositories
+- [Database migrations](backend/src/main/resources/db/migration)
+- [Frontend](frontend/public)
+- [Worker application](ocr-worker/src/main/java/at/technikum/swen3/worker)
+- [Docker Compose setup](compose.yaml)
+- [Spring AMQP listeners](https://docs.spring.io/spring-amqp/reference/amqp/receiving-messages/async-annotation-driven.html) and [error handling](https://docs.spring.io/spring-amqp/reference/amqp/exception-handling.html)
+- [Elasticsearch index API](https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-index) and [Docker setup](https://www.elastic.co/docs/deploy-manage/deploy/self-managed/install-elasticsearch-docker-basic)
+- [Kibana Docker setup](https://www.elastic.co/docs/deploy-manage/deploy/self-managed/install-kibana-with-docker) and [Logstash configuration](https://www.elastic.co/docs/reference/logstash/docker-config)
+
+One problem we ran into was nginx forwarding the wrong path. Removing `/api/` fixed it. We also added validation in the service because frontend and controller checks do not cover direct service calls. For Sprint 4, we had to account for Elasticsearch taking a moment to make a new index searchable, so the checks wait for it within a time limit.
+
+We work on sprint branches and check the whole app before merging into `main`. Tasks are on the board linked above. We used Codex to help with implementation, tests and documentation, and both go through the code before the review.

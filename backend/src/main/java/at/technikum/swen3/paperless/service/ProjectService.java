@@ -9,4 +9,5 @@ public interface ProjectService {
     List<Project> listProjects();
     Document assignDocument(Long projectId, Long documentId);
     List<Document> listDocumentsInProject(Long projectId);
+    void deleteProject(Long projectId);
 }

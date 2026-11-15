@@ -3,8 +3,10 @@ package at.technikum.swen3.paperless;
 import at.technikum.swen3.paperless.model.DocumentEntity;
 import at.technikum.swen3.paperless.repository.DocumentRepository;
 import at.technikum.swen3.paperless.service.DefaultDocumentService;
+import at.technikum.swen3.paperless.service.ElasticsearchClient;
 import at.technikum.swen3.paperless.service.mapping.ProjectMapper;
 import at.technikum.swen3.paperless.service.model.Document;
+import at.technikum.swen3.paperless.storage.DocumentStorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,11 +43,17 @@ class DefaultDocumentServiceTest {
     private Logger logger;
 
     @Mock
-    DocumentEventPublisher publisher;
+    private DocumentEventPublisher publisher;
+
+    @Mock
+    private DocumentStorage store;
+
+    @Mock
+    private ElasticsearchClient  elasticsearchClient;
 
     @BeforeEach
     void setUp() {
-        service = new DefaultDocumentService(documents, mapper, logger, publisher);
+        service = new DefaultDocumentService(documents, mapper, logger, publisher, store, elasticsearchClient);
     }
     @Test
     void createDocumentTrimsTitle() {

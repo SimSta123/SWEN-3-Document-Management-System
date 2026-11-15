@@ -9,6 +9,16 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class QueueConfiguration {
     @Bean
+    public Queue ocrResultQueue(@Value("${paperless.ocr.result-queue}") String name) {
+        return QueueBuilder.durable(name).deadLetterExchange("").deadLetterRoutingKey(name + ".failed").build();
+    }
+
+    @Bean
+    public Queue failedOcrResultQueue(@Value("${paperless.ocr.result-queue}") String name) {
+        return QueueBuilder.durable(name + ".failed").build();
+    }
+
+    @Bean
     public Queue uploadQueue(@Value("${paperless.ocr.queue}") String name) {
         return QueueBuilder.durable(name).deadLetterExchange("").deadLetterRoutingKey(name + ".failed").build();
     }

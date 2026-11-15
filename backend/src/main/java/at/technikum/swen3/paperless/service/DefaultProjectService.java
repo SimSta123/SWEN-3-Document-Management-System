@@ -115,4 +115,16 @@ public class DefaultProjectService implements ProjectService {
 
         return documentsList;
     }
+
+    @Override
+    @Transactional
+    public void deleteProject(Long projectId) {
+        ProjectEntity project = projects.findById(projectId).orElseThrow(() -> new NotFoundException("Project not found"));
+
+        for (DocumentEntity document : documents.findByProjectIdOrderByIdAsc(projectId)) {
+            document.assignTo(null);
+        }
+
+        projects.delete(project);
+    }
 }

@@ -38,6 +38,13 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
     }
 
+    @ExceptionHandler(java.io.IOException.class)
+    public ProblemDetail externalServiceFailure(java.io.IOException exception) {
+        logger.error("Document storage or search request failed", exception);
+        return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE,
+                "The document storage or search service is unavailable. Try again later.");
+    }
+
     // Spring Data already translates database errors into these exceptions.
     // https://docs.spring.io/spring-framework/reference/data-access/dao.html
     @ExceptionHandler(DataAccessException.class)

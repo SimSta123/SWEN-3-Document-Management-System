@@ -52,4 +52,12 @@ public class ProjectController {
 
         return service.listDocumentsInProject(projectId);
     }
+
+    @DeleteMapping("/projects/{projectId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteProject(@PathVariable Long projectId, HttpServletRequest httpRequest) {
+        httpRequest.setAttribute("logMessage", "Requesting to delete project with id: %s".formatted(projectId));
+
+        service.deleteProject(projectId);
+    }
 }

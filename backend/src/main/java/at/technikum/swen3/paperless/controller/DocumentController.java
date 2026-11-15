@@ -28,7 +28,7 @@ public class DocumentController {
 
     public record CreateDocumentRequest(@NotBlank @Size(max = 255) String title) {}
 
-    @PostMapping(value = "/documents", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/documents")
     @ResponseStatus(HttpStatus.CREATED)
     public Document createDocument(@Valid @RequestBody CreateDocumentRequest request, HttpServletRequest httpRequest) {
         httpRequest.setAttribute("logMessage", "Requesting to create document with title: %s".formatted(request.title()));
@@ -58,14 +58,23 @@ public class DocumentController {
         filename = filename.replace('\\', '/');
         filename = filename.substring(filename.lastIndexOf('/') + 1);
         httpRequest.setAttribute("logMessage", "Requesting to create document from PDF upload");
-        return service.createDocument(title == null ? filename : title);
+        return service.createActualDocument(file, title == null ? filename : title);
     }
 
+
     @GetMapping("/documents")
-    public List<Document> listAllDocuments(HttpServletRequest httpRequest) {
+    public List<Document> listAllDocuments(@RequestParam(required = false) String search, HttpServletRequest httpRequest) throws IOException {
         httpRequest.setAttribute("logMessage", "Requesting to list all documents");
 
-        return service.listAllDocuments();
+        if (search == null || search.isBlank()) {
+            httpRequest.setAttribute("logMessage", "Requesting to list all documents");
+
+            return service.listAllDocuments();
+        }
+
+        httpRequest.setAttribute("logMessage", "Requesting to search documents");
+
+        return service.searchDocuments(search);
     }
 
     @GetMapping("/documents/{documentId}")
@@ -73,5 +82,13 @@ public class DocumentController {
         httpRequest.setAttribute("logMessage", "Requesting to get document with id: %s".formatted(documentId));
 
         return service.getDocument(documentId);
+    }
+
+    @DeleteMapping("/documents/{documentId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteDocument(@PathVariable Long documentId, HttpServletRequest httpRequest) throws IOException {
+        httpRequest.setAttribute("logMessage", "Requesting to delete document with id: %s".formatted(documentId));
+
+        service.deleteDocument(documentId);
     }
 }
