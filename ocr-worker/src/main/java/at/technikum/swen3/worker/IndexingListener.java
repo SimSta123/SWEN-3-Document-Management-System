@@ -14,11 +14,13 @@ import tools.jackson.databind.json.JsonMapper;
 public class IndexingListener {
     private final ElasticsearchIndexer indexer;
     private final Logger logger;
+    private final DocumentLifecycle documents;
     private final JsonMapper json = JsonMapper.builder().build();
 
-    public IndexingListener(ElasticsearchIndexer indexer, Logger logger) {
+    public IndexingListener(ElasticsearchIndexer indexer, Logger logger, DocumentLifecycle documents) {
         this.indexer = indexer;
         this.logger = logger;
+        this.documents = documents;
     }
 
     @RabbitListener(queues = "${paperless.ocr.result-queue}")
@@ -39,8 +41,11 @@ public class IndexingListener {
         }
 
         try {
-            indexer.index(result);
-            logger.info("Indexed OCR result: documentId={}, characters={}", result.documentId(), result.text().length());
+            if (documents.whilePresent(result.documentId(), () -> indexer.index(result))) {
+                logger.info("Indexed OCR result: documentId={}, characters={}", result.documentId(), result.text().length());
+            } else {
+                logger.info("Skipped indexing for deleted document: documentId={}", result.documentId());
+            }
         } catch (IOException | RuntimeException exception) {
             logger.error("Indexing failed: documentId={}", result.documentId(), exception);
             throw new AmqpRejectAndDontRequeueException("Elasticsearch indexing failed", exception);

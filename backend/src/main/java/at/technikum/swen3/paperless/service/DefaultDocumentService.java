@@ -121,9 +121,13 @@ public class DefaultDocumentService implements DocumentService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = IOException.class)
     public void deleteDocument(Long documentId) throws IOException{
-        DocumentEntity document = documents.findById(documentId).orElseThrow(() -> new NotFoundException("Document not found"));
+        if (documentId == null || documentId <= 0) {
+            throw new InvalidInputException("Document id must be positive");
+        }
+        DocumentEntity document = documents.findForDeletion(documentId)
+                .orElseThrow(() -> new NotFoundException("Document not found"));
 
         String key = document.getObjectKey();
 

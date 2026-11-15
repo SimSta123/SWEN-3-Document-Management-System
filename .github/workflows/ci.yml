@@ -66,6 +66,15 @@ jobs:
         run: python3 scripts/check-ocr-flow.py
       - name: Check ELK connections
         run: python3 scripts/check-elk.py
+      - name: Check deletion with queued and running OCR
+        env:
+          API_URL: http://localhost:8088/api
+        run: python3 scripts/check-deletion-flow.py
+      - name: Check deletion locks against PostgreSQL
+        run: |
+          docker compose exec -T database createdb -U paperless lifecycle_test
+          docker build --target build -t paperless-worker-lock-tests ocr-worker
+          docker run --rm --network swen3-paperless_default paperless-worker-lock-tests mvn --batch-mode --no-transfer-progress -Dtest=DocumentLifecycleTest -Dlifecycle.test.url=jdbc:postgresql://database:5432/lifecycle_test -Dlifecycle.test.user=paperless -Dlifecycle.test.password="$POSTGRES_PASSWORD" test
       - name: Show service logs
         if: failure()
         run: docker compose logs --no-color

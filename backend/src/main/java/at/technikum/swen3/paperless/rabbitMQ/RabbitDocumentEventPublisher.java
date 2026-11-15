@@ -14,6 +14,9 @@ public class RabbitDocumentEventPublisher implements DocumentEventPublisher {
 
     public RabbitDocumentEventPublisher(RabbitTemplate rabbit, @Value("${paperless.ocr.queue}") String uploadQueue, Logger logger) {
         this.rabbit = rabbit;
+        // Spring synchronizes the AMQP commit after the surrounding database transaction.
+        // Otherwise the worker could receive the ID before its record is visible.
+        this.rabbit.setChannelTransacted(true);
         this.uploadQueue = uploadQueue;
         this.logger = logger;
     }

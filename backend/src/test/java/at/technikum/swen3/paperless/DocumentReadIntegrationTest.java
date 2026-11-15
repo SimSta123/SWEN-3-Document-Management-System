@@ -49,6 +49,37 @@ class DocumentReadIntegrationTest {
     @MockitoBean
     private RabbitTemplate rabbit;
 
+    @MockitoBean
+    private at.technikum.swen3.paperless.service.ElasticsearchClient elasticsearch;
+
+    @Test
+    void deletingPdfRemovesMetadataOriginalAndSearchEntry() throws Exception {
+        upload(PDF_HEADER, "Delete me");
+        var document = documents.findAll().getFirst();
+        assertThat(request("DELETE", "/documents/" + document.getId(), null).statusCode()).isEqualTo(204);
+        assertThat(documents.existsById(document.getId())).isFalse();
+        verify(s3).deleteObject(any(software.amazon.awssdk.services.s3.model.DeleteObjectRequest.class));
+        verify(elasticsearch).delete(document.getId());
+        assertThat(request("GET", "/documents/" + document.getId(), null).statusCode()).isEqualTo(404);
+    }
+
+    @Test
+    void failedExternalDeletionKeepsMetadataAndCanBeRetried() throws Exception {
+        var document = docService.createDocument("Retry deletion");
+        doThrow(new java.io.IOException("Elasticsearch unavailable")).when(elasticsearch).delete(document.id());
+        assertThat(request("DELETE", "/documents/" + document.id(), null).statusCode()).isEqualTo(503);
+        assertThat(documents.existsById(document.id())).isTrue();
+        doNothing().when(elasticsearch).delete(document.id());
+        assertThat(request("DELETE", "/documents/" + document.id(), null).statusCode()).isEqualTo(204);
+        assertThat(documents.existsById(document.id())).isFalse();
+    }
+
+    @Test
+    void deletionValidatesIdAndPreservesNotFoundResponse() throws Exception {
+        assertThat(request("DELETE", "/documents/0", null).statusCode()).isEqualTo(400);
+        assertThat(request("DELETE", "/documents/9223372036854775807", null).statusCode()).isEqualTo(404);
+    }
+
     private HttpResponse<String> request(String method, String path, String body) throws Exception {
         try (HttpClient client = HttpClient.newHttpClient()) {
             HttpRequest request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + path))
