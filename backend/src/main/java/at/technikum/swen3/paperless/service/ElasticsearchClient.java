@@ -40,16 +40,14 @@ public class ElasticsearchClient {
             throw new IllegalArgumentException("Document ID must be positive");
         }
 
-        var request = HttpRequest.newBuilder(
-                        URI.create(indexUrl + "/_doc/" + documentId + "?refresh=wait_for"))
+        var request = HttpRequest.newBuilder(URI.create(indexUrl + "/_doc/" + documentId + "?refresh=wait_for"))
                 .timeout(Duration.ofSeconds(15))
                 .header("Authorization", authorization)
                 .DELETE()
                 .build();
 
         try {
-            var response = client.send(
-                    request, HttpResponse.BodyHandlers.ofString());
+            var response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() != 200 && response.statusCode() != 404) {
                 throw new IOException(
@@ -76,8 +74,7 @@ public class ElasticsearchClient {
                 )
         ));
 
-        var request = HttpRequest.newBuilder(
-                        URI.create(indexUrl + "/_search"))
+        var request = HttpRequest.newBuilder(URI.create(indexUrl + "/_search"))
                 .timeout(Duration.ofSeconds(15))
                 .header("Authorization", authorization)
                 .header("Content-Type", "application/json")

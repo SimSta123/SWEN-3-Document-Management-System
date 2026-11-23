@@ -280,10 +280,16 @@ function startDashboard() {
       title.focus();
     }
   });
-  searchForm.addEventListener("submit", event => {
-    event.preventDefault();
+  function runSearch() {
     activeSearch = searchTerm.value.trim();
     loadLibrary();
+  }
+
+  searchTerm.addEventListener("input", runSearch);
+
+  searchForm.addEventListener("submit", event => {
+    event.preventDefault();
+    runSearch();
   });
   refresh.addEventListener("click", loadLibrary);
   loadLibrary();
