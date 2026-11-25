@@ -26,7 +26,7 @@ You need Docker Desktop with Linux containers enabled.
 
 4. Open [localhost](http://localhost/) for the website.
 
-The first build takes a while because it downloads the images and builds both Java applications. The `kibana-setup` container should finish and exit successfully. It only sets up Kibana's service account; the other services keep running.
+The first build takes a while because it downloads the images and builds the Java applications. The `kibana-setup` container should finish and exit successfully. It only sets up Kibana's service account; the other services keep running.
 
 | Service | Default address | Login |
 | --- | --- | --- |
@@ -142,6 +142,14 @@ Blank or invalid UTF-8 upload messages are rejected. Older metadata-only message
 An older local queue may exist without the failed-message settings. RabbitMQ will reject the new arguments for that queue. Drain its pending messages before recreating it, or use a new queue name for testing. Do not delete queued uploads or OCR results.
 
 Use `docker compose logs -f ocr-worker` for worker logs and the RabbitMQ management page to inspect queues.
+
+## Summary worker
+
+The `summary-worker` directory is a separate Spring Boot application for Sprint 5. Compose starts it after RabbitMQ is healthy and passes in `OPENAI_API_KEY` from the local `.env`. The worker scaffold starts with an empty key for local builds and CI. Summary processing will be added to this worker.
+
+```sh
+docker compose logs summary-worker
+```
 
 ## RustFS and ELK
 

@@ -201,6 +201,18 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  summary-worker:
+    build: ./summary-worker
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: paperless
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
   frontend:
     build: ./frontend
     ports:
