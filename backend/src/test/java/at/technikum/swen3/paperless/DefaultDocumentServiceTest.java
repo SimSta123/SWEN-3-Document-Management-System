@@ -58,7 +58,7 @@ class DefaultDocumentServiceTest {
     @Test
     void createDocumentTrimsTitle() {
         DocumentEntity saved = new DocumentEntity("Invoice");
-        Document expected = new Document(10L, "Invoice", null);
+        Document expected = new Document(10L, "Invoice", null, null);
 
         when(documents.save(any(DocumentEntity.class))).thenReturn(saved);
         when(mapper.toDocument(saved)).thenReturn(expected);
@@ -101,7 +101,7 @@ class DefaultDocumentServiceTest {
     @Test
     void createDocumentAcceptsTitleWith255Characters() {
         DocumentEntity saved = new DocumentEntity("a".repeat(255));
-        Document expected = new Document(10L, "a".repeat(255), null);
+        Document expected = new Document(10L, "a".repeat(255), null, null);
 
         when(documents.save(any(DocumentEntity.class))).thenReturn(saved);
         when(mapper.toDocument(saved)).thenReturn(expected);

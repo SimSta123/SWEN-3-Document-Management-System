@@ -1,0 +1,117 @@
+Transkript – Aufzeichnung (38)
+Dauer 21:05 · Deutsch · Zeitmarken ungefähr
+Automatisch transkribiert und sprachlich nachbearbeitet. Eckige Klammern kennzeichnen unklare Stellen und Hinweise zur Aufnahme.
+
+[00:00]
+So, das ist das Problemstatement, das ist Prompting und die Anforderungen an die KI, die wir erstellen. [Unverständlich] … wozu die KI in der Lage sein soll. Und je genauer wir das definieren, desto [unverständlich].
+
+[00:23]
+Und jetzt gibt es den Punkt, wie man der KI mitteilen kann, was sie machen soll und was nicht.
+
+[00:46]
+Was passiert, wenn wir die Annahmen nicht unter Kontrolle bekommen? Dann haben wir diesen typischen Loop hier. Wir spezifizieren etwas, wir haben unseren Prompt, wir schicken ihn an die KI, wir bekommen etwas zurück, wir kontrollieren, ob es passt, verändern den Prompt, schicken ihn auch wieder. Und das kann mitunter ein ziemliches Problem sein, weil nämlich, je mehr wir mit der KI generieren, desto weniger Einblick in den Code haben wir, desto weniger Kontrolle haben wir. Aber es muss trotzdem [unverständlich] sein. Das bedeutet, auch die Tests werden meistens von der KI generiert, damit das zusammenpasst. Und dann ist der Punkt, dass wir, wir haben eine Vorgabe, was ist zu implementieren. Das ist implementiert, das wird vom Test getestet,
+
+[01:35]
+aber wirklich, dann haben wir keine Ahnung. Und wir haben auch keine Kontrolle, wie das implementiert wird. Das bedeutet auch, es kann durchaus sein, dass wir uns hier von der Spezifikation oder der Aufgabenstellung wegbewegen. [Unverständlich] So, der Ansatz, Sie sehen jetzt Agentic Engineering, wo wir sagen, passt, wir wollen jetzt einen Agenten haben. Wir wollen eine KI haben und wir wollen [unverständlich] eine zweite Person haben, die der KI auf die Finger schaut.
+
+[02:09]
+Das ist das, was die KI liefert. Und das funktioniert oben, die linke Variante, ohne den Agenten. Wir haben Input, die KI macht eben was und [unverständlich]. Rechts haben wir einen Agentic Loop. Die KI erzeugt etwas. Wir haben den Agenten, der gegen Regeln prüft, die wir definiert haben. Und die KI macht es so lange, bis es diesen Regeln entspricht. Das kann man machen, indem man sogenannte Skill-Files mitgibt, in denen die Grenzen definiert sind. Zum Beispiel, ich möchte hier [unverständlich]. Wie soll jetzt implementiert werden? Welche Patterns sollen verwendet werden? Es muss
+
+[03:04]
+alles mit Unit-Tests hinterlegt sein und so weiter. Wir können Regeln definieren, auch im Großen, für diesen Agenten, der auch eine KI ist, der das, was die KI produziert, kontrolliert und erst dann freigibt, wenn die Regeln, die wir definiert haben, [unverständlich]. Die Antworten, die wir bekommen, sollten dementsprechend qualitativ höher werden. Und diese Regeln können wir jetzt natürlich auch extrem lang machen. Und das sind ja dann diese Skills. Was ist drin? Du musst produktiven Code liefern, enterprise-fähig und so weiter. Und da kann man viele Sachen reinschreiben.
+
+[03:44]
+Er muss ein Chain of Responsibility [unverständlich], damit es leichter wartbar ist und so weiter. [Unverständlich] kann man das angehen. Plus, wir können hier Assets reingeben, die zu verwenden sind. Das heißt, wir können schon fertige Daten mitgeben, die die KI [unverständlich], um dementsprechend die Software zu produzieren, die wir [unverständlich]. Was fehlt der KI? Warum ist das ein Problem? [Unverständlich] Das ist die sogenannte Domain. Die KI ist allgemein trainiert. Das heißt, die kann uns allgemeine Sachen beantworten. Aber genau in der Domäne, wenn wir zum Beispiel in Versicherungen sind, diese Information fehlt. Und die kann man eben
+
+[04:30]
+in dem Fall genauso mitgeben. Also Sie können hier in den Skills die Information mitgeben. Was bedeutet für uns ein Vertrag? Oder was heißt ein Vertragsfall? [Unverständlich] und wir müssen bezahlen. Was bedeutet das im Kontext des Unternehmens und des Projekts? Das kann man da jetzt mitgeben. Man kann textuell Algorithmen definieren. Was bedeutet das denn, wenn ein Schadensfall in unserer Versicherung angemeldet ist? Welche Schritte haben zu erfolgen? Die kann man da mitgeben. Das heißt, wir können hier wieder Stack-konforme Sachen reinschreiben, die geprüft werden. [Unverständlich]
+
+[05:17]
+Eben, der Code, der rauskommt, muss zum Beispiel eine Code-Coverage von 90 Prozent haben. Es muss eine Cyclomatic Complexity von unter [Wert unklar] sein. Das kann man alles definieren. Und dieser Agent prüft, ob der Code tatsächlich [unverständlich]. Project Conventions.
+
+[05:42]
+Da kann man auch sagen, Coding Conventions. Man muss sich an die Coding Conventions halten. Je mehr wir reingeben, desto eher entspricht das Ergebnis dem, was wir [unverständlich]. Und das führt uns dazu. Im Software Development Life Cycle verlagert sich unsere Aufgabe, die wir als Developer haben, immer mehr weg vom Programmieren, hin dazu, dass wir die Tools, die wir haben, die AI-Tools, die wir haben, immer besser einsetzen, um [unverständlich]. Das heißt, wir haben jetzt auch in
+
+[06:27]
+jeder Phase vom Software Development Life Cycle Punkte, wo uns die KI unterstützen kann. Und die müssen wir definieren. Zum Beispiel, wenn wir nach der Analyse-Phase unsere Requirements haben, können wir die Requirements hier im Development, wie wir schon gesehen haben, als Skills mitgeben, damit [unverständlich]. Genauso das Testing. Die KI hilft uns extrem beim Testing.
+
+[06:56]
+[Unverständlich] Dann gibt es Maintenance oder Deployment, und Maintenance sind die Sachen, die derzeit noch weniger der KI überlassen werden. Weil, das betrifft Maintenance, wenn die User herkommen und sagen, ich brauche [unverständlich]. Wenn es Probleme gibt, es gibt Fehler in der Produktion, soll die KI das realisieren und selbstständig Fixes einspielen dürfen, oder soll [unverständlich] ein Mensch drüberschauen können? Zumindest, dass jemand draufschauen kann. Derzeit, was ich beobachtet habe, geht es eher dahin, dass, wenn man schon im
+
+[07:40]
+Maintenance-Bereich KI verwendet, es in die Richtung geht, dass die KI analysiert, quasi eine Summary zusammenstellt, [unverständlich], Tickets erzeugt und vielleicht sogar Patches vorschlägt und die an die Tickets anhängt. Den Patch kann man sich anschauen und sagen, das ist wirklich die Lösung für das Problem, aber es muss dennoch dann irgendwer drüberschauen und sagen, ja, ich möchte das übernehmen.
+
+[08:25]
+Was bedeutet das für Agentic Engineering? Das heißt, wir brauchen eine Kontrollinstanz, die die produzierende KI unter Kontrolle hält. Genauso wie wir es im normalen Leben mit dem Tester und dem Programmierer haben. Der Tester kontrolliert, oder zumindest am Ende der User, der dann kontrolliert, ob [unverständlich].
+
+[08:50]
+[Unverständlich] Ihr könnt auch verschiedene Regeln haben, inhaltlich, architektonisch, testgetrieben, [unverständlich] und so weiter. [Unverständlich] Wie gesagt, steht derzeit eher in den Kinderschuhen. Ich habe bis jetzt [unverständlich] gesehen, dass sie hier ein Probeprojekt haben, dass sie tatsächlich für jede von diesen Ebenen, sie versuchen jetzt ein Projekt zu machen, wo die KI die gesamte Sache [unverständlich] durchgeht und es unterstützt. Bedeutet, dass ihr für jeden von diesen Schritten zumindest einen [unverständlich] braucht. [Unverständlich] Sie nimmt die Ergebnisse von einem [unverständlich]. Das heißt, worauf
+
+[09:35]
+konzentrieren wir uns dann? Am Anfang die Analyse mit der Fachabteilung, mit den Specs zu definieren. Das Problem mit dem Ganzen ist, was wir ganz am Anfang gesehen haben hier. Wo wollen wir uns befinden? Wollen wir [unverständlich]?
+
+[09:59]
+Wir definieren alle [unverständlich], damit das der KI übergeben werden kann. Und wenn Sie alles generieren, dann sind wir im Wasserfall. Dann sind wir dort, wo wir in den 90er-Jahren waren. Wir definieren alles monatelang, schicken es in die KI. Wir kriegen eine Antwort und dann wissen wir, ob [unverständlich]. Die zweite Variante ist iterativ. Wir spezifizieren, die KI produziert, und wir müssen immer wieder neu die KI befüttern. Bedeutet auch, dass wir [unverständlich] steigern, weil wir [unverständlich]. Und das Dritte ist „Spec as Source“ [Begriff unsicher]. Das ist meiner Meinung nach eine philosophische Diskussion in der Richtung. Das geht in die Richtung, was in den
+
+[10:46]
+90er Jahren schon mit dem Case-Modelling gab. Das war UML. Wir haben ein riesengroßes UML-Diagramm. Wir füttern alles in die UML hinein. Dann ist da quasi ein Interpreter, und dahinter haben wir ein lauffähiges Programm. Und es gibt keinen echten Programmcode, sondern der wird zu Laufzeit aus diesem UML-Diagramm erzeugt und wird exekutiert. Und das geht hier auch in die Richtung. Die Spezifikation ist quasi die [unverständlich]. Und es gibt einen Interpreter, die KI. [Unverständlich] ein lauffähiges Programm, und das wird dort starten und laufen. Wie gesagt, meiner Meinung nach ist das philosophisch. Ich kann mir nicht vorstellen, dass es irgendein Unternehmen gibt, das [unverständlich] und sagt, wir definieren
+
+[11:33]
+nur noch und [unverständlich]. Und lässt es sofort laufen. Aber wir sehen, wir bewegen uns langsam in die Richtung hier, dass immer mehr Agenten verbunden sind. Die ersten Versuche von den Projekten sind eher hier, anhand des ersten Agenten. Wie kann ich den konfigurieren, einschränken? Ich habe bisher [unverständlich] ein einheitliches Projekt gesehen. Wir gehen dahin.
+
+[12:00]
+Das Multi-Agent-System, dass für einen Software Development Life Cycle für jede Ebene ein Agent gemacht wird. Zumindest [unverständlich] im Development mehrere Agenten haben. Der erste Agent kümmert sich darum, ob die Software-Patterns richtig umgesetzt sind. Der zweite Agent kümmert sich um das Testing, ob das richtig umgesetzt ist. Und dann kümmert sich [unverständlich] darum, ob die Ergebnisse richtig sind, die da rauskommen. Das ist ja das [unverständlich]. Jetzt muss ich da jetzt ja ein Ergebnis [unverständlich]. Bei dem Projekt ist sogar rausgekommen, dass die Qualität, die rauskommt, wenn ich mehr als einen Agenten auf einer Ebene von Development hab, höher ist, als wenn ich alles in einem Agenten habe. Scheinbar, das [unverständlich], das ist bekannt. Erstens mal, die
+
+[12:45]
+KI kann gerne halluzinieren. Zweitens aber auch, sie geht teilweise Wege, die illegal sind, um die Ziele zu erreichen. Es fehlt eben das Gewissen. Die Hürde, etwas Illegales zu tun, ist viel geringer. Genauso ist es bei ChatGPT, dass die Agenten ausgebrochen sind und [unverständlich] eingebrochen sind.
+
+[13:10]
+Nur um eine Antwort zu bekommen. Und wenn ich hier einen Agenten habe, ist der eher gewillt, etwas zu akzeptieren, was nicht richtig ist. Und [unverständlich], als wenn es mehr Agenten sind. Bei dem Projekt [unverständlich], dass es viel besser ist, wenn einzelne Agenten für einzelne Aspekte da sind. Deswegen glaube ich, dass das eine Richtung wird, [unverständlich].
+
+[13:37]
+Gibt es Fragen dazu?
+
+[13:42]
+Ja, ich habe noch eine Frage.
+
+[14:06]
+Beim Projekt, beim Sprint 5, steht „Generate a smartphone app using the AI coding tool“. [Rest der Frage unverständlich] So, und dann?
+
+[15:05]
+[Unverständlich] Wenn ich die Smartphone-App habe, [unverständlich].
+
+[15:34]
+Ich habe einen Punkt [unverständlich]. Da geht es ja nicht nur darum, die KI Smartphone-Apps coden zu lassen, sondern es geht so. „Smartphone app is available and running.“ [Unverständlich] Sie können [unverständlich] einladen und einen Service geben, und das ist nachher auch viel mehr.
+
+[16:03]
+[Unverständlich] Frontend in Angular programmieren, [unverständlich] [Unverständlich] Ich gehe davon aus, dann braucht ihr [unverständlich]. Und nun das Generieren für das. Weitere Frage?
+
+[16:33]
+Was mir wichtig ist, ist, dass der Microservice eigenständig ist.
+
+[16:57]
+Das heißt, er wird nicht direkt aufgerufen, [unverständlich], sondern immer über die Queue. Das ist ein eigener Microservice. [Unverständlich] OCR und REST. Und dass die Summary in der Datenbank gespeichert wird, und das aber natürlich vom REST-Service. Nur der REST-Service, [unverständlich]. Das heißt, dann das Ergebnis wieder über eine Queue zurückschicken zum REST-Service, und der REST-Service speichert es dann.
+
+[17:21]
+[Unverständlich] … zum Donnerstag. [Unverständlich] Es ist etwas, das jetzt dazu langsam gekommen ist, zu versuchen, die KI nicht nur als Spielzeug zu verwenden, sondern wirklich sinnvoll, um irgendeinen Mehrwert zu haben, der auch produktiv verwendbar ist.
+
+[18:04]
+Viele Unternehmen, [unverständlich], dass der KI-Hype vor ein, zwei Jahren war. [Unverständlich] begeistert. Und bei den Unternehmen ist es so, dass langsam das Aha-Erlebnis herkommt, wo das Problem ist. Ist das so cool, wie wir uns das vorgestellt haben? Das ist nicht so, wie wir [unverständlich].
+
+[18:27]
+Es bringt einerseits [unverständlich], andererseits liefert es nicht die Qualität, die wir haben wollen. Und wie bringen wir das Ganze dorthin, wo wir das auch produktiv haben? [Unverständlich] [Unverständlich] Code erzeugt wird, einfach ein Code, den sich dann keiner anschaut und der dann übernommen wird.
+
+[18:51]
+Das gammelt dann so herum. Keiner weiß, wie und was [unverständlich]. Und das wird immer wieder übernommen. Da habe ich zwei Sachen gemacht. Das eine ist schon vor [unverständlich] eine statistische Studie über alle Open-Source-GitHub-Projekte. Sie haben verglichen, wie die Qualität der Implementierung vor fünf Jahren war und wie sie jetzt ist. Und sie sehen, dass früher zwanzig Prozent des Codes Copy-Paste war und achtzig Prozent Wiederverwendung von Code.
+
+[19:24]
+Das ist alles, was wir über [unverständlich] erklären. Mittlerweile hat es sich komplett umgedreht. Achtzig Prozent ist Copy-Paste, und der gleiche Code ist x-mal im Projekt vorhanden. Warum? [Unverständlich] Wenn alle die KI verwenden, irgendwelche Prompts machen, irgendwelche Antworten reinkommen, keiner schaut mehr, ob [unverständlich]. Das eine ist die Gruppe [unverständlich]. Die haben noch nicht ganz kapiert, dass KI ein Tool ist, das hilft, aber nicht die Lösung gibt.
+
+[19:53]
+Hier sind Präsentationen bei uns. Das Ding ist genial, das sieht super aus. Aber der Student hat keinen blassen Schimmer [unverständlich] und kann nicht erklären, was das jetzt alles macht. Und wenn er das nicht kann, ist das nicht sein Code, dann ist er negativ. Alles, was ihr von der KI bekommt, soll als Tool dienen. Aber ihr müsst es verstehen und beurteilen [unverständlich]. Wie gesagt, [unverständlich] müsst ihr es verstehen, und erst dann könnt ihr es übernehmen.
+
+[20:22]
+Und wie könnt ihr verantworten, dass ihr einen Programmteil produktiv stellt, wo ihr keine Ahnung habt, was er eigentlich tut? Ihr seid [unverständlich] die Leute, und ihr seid verantwortlich dafür. Und da sind wir diejenigen, die euch noch Hilfestellung geben, dass ihr schon seht, dass ihr die Verantwortung habt für den Code, den ihr da abgebt oder präsentiert. Und so, für mich ist es leicht, ich kann in fünf Minuten [unverständlich], wenn ihr keine Ahnung habt vom Code [unverständlich].
+
+[20:53]
+Und das ist etwas, da muss man erst reinkommen. Danke, wir sehen uns am Montag. Und da haben wir die … [Aufnahme endet]

@@ -164,4 +164,26 @@ public class DefaultDocumentService implements DocumentService {
                 .filter(Objects::nonNull)
                 .toList();
     }
+
+    @Transactional
+    @Override
+    public void saveSummary(long documentId, String summary) {
+        if (documentId <= 0) {
+            throw new InvalidInputException("Document id must be positive");
+        }
+        if (summary == null || summary.isBlank()) {
+            throw new InvalidInputException("Document summary must not be blank");
+        }
+
+        String normalized = summary.strip();
+
+        documents.findForDeletion(documentId).ifPresent(document -> {
+            if (document.getSummary() != null) {
+                throw new IllegalStateException(
+                        "Document " + documentId + " already has a summary");
+            }
+
+            document.setSummary(normalized);
+        });
+    }
 }

@@ -11,12 +11,12 @@ import tools.jackson.databind.json.JsonMapper;
 @Component
 public class OcrResultPublisher {
     private final RabbitTemplate rabbit;
-    private final String queue;
+    private final String exchange;
     private final JsonMapper json = JsonMapper.builder().build();
 
-    public OcrResultPublisher(RabbitTemplate rabbit, @Value("${paperless.ocr.result-queue}") String queue) {
+    public OcrResultPublisher(RabbitTemplate rabbit, @Value("${paperless.ocr.exchange}") String exchange) {
         this.rabbit = rabbit;
-        this.queue = queue;
+        this.exchange = exchange;
     }
 
     public void publish(long documentId, String text) {
@@ -25,6 +25,6 @@ public class OcrResultPublisher {
                 .setContentEncoding("UTF-8")
                 .setDeliveryMode(MessageDeliveryMode.PERSISTENT)
                 .build();
-        rabbit.send(queue, message);
+        rabbit.send(exchange, "", message);
     }
 }

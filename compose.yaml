@@ -182,6 +182,7 @@ services:
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
       OCR_QUEUE: ${OCR_QUEUE:-document.uploaded}
       OCR_RESULT_QUEUE: ${OCR_RESULT_QUEUE:-document.ocr.completed}
+      GENAI_REQUEST_QUEUE: ${GENAI_REQUEST_QUEUE:-document.genai.requested}
       ELASTICSEARCH_URL: http://elasticsearch:9200
       ELASTICSEARCH_INDEX: ${ELASTICSEARCH_INDEX:-documents}
       ELASTICSEARCH_USERNAME: elastic
@@ -207,6 +208,8 @@ services:
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_USER: paperless
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
+      GENAI_REQUEST_QUEUE: ${GENAI_REQUEST_QUEUE:-document.genai.requested}
+      GENAI_RESULT_QUEUE: document.genai.completed
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     depends_on:
       rabbitmq:

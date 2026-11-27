@@ -400,6 +400,10 @@ dd {
     overflow-wrap: anywhere;
 }
 
+#detail-summary {
+    white-space: pre-line;
+}
+
 footer {
     padding: 22px 24px;
     border-top: 1px solid #e0e5dc;

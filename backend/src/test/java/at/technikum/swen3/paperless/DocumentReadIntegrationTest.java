@@ -101,8 +101,9 @@ class DocumentReadIntegrationTest {
         var response = request("GET", "/documents", null);
         assertThat(response.statusCode()).isEqualTo(200);
         assertThat(response.body()).contains(
-                "{\"id\":" + unassigned.id() + ",\"title\":\"Unassigned notes\",\"projectId\":null}",
-                "{\"id\":" + assigned.id() + ",\"title\":\"Project notes\",\"projectId\":" + project.id() + "}");
+                "{\"id\":" + unassigned.id() + ",\"title\":\"Unassigned notes\",\"projectId\":null,\"summary\":null}",
+                "{\"id\":" + assigned.id() + ",\"title\":\"Project notes\",\"projectId\":" + project.id()
+                        + ",\"summary\":null}");
     }
 
     @Test
@@ -113,14 +114,17 @@ class DocumentReadIntegrationTest {
     }
 
     @Test
-    void detailReturnsSelectedRecordAndProject() throws Exception {
+    void detailReturnsSelectedRecordWithProjectAndSummary() throws Exception {
         var document = docService.createDocument("Selected document");
         var project = service.createProject("Course", "");
         service.assignDocument(project.id(), document.id());
+        String summary = "Notes from the course. ".repeat(12) + "Final remarks.";
+        docService.saveSummary(document.id(), summary);
         var response = request("GET", "/documents/" + document.id(), null);
         assertThat(response.statusCode()).isEqualTo(200);
         assertThat(response.body()).isEqualTo("{\"id\":" + document.id()
-                + ",\"title\":\"Selected document\",\"projectId\":" + project.id() + "}");
+                + ",\"title\":\"Selected document\",\"projectId\":" + project.id()
+                + ",\"summary\":\"" + summary + "\"}");
     }
 
     @Test

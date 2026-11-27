@@ -29,6 +29,9 @@ public class DocumentEntity {
     @Column(name = "size_bytes")
     private Long sizeBytes;
 
+    @Column(name = "summary", columnDefinition = "TEXT")
+    private String summary;
+
     protected DocumentEntity() {}
 
     public DocumentEntity(String title) {
@@ -53,4 +56,8 @@ public class DocumentEntity {
     public void assignTo(ProjectEntity project) {
         this.project = project;
     }
+
+    public String getSummary() { return summary;}
+
+    public void setSummary(String summary) {this.summary = summary;}
 }

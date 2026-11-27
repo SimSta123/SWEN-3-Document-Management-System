@@ -352,6 +352,7 @@ function startDetail() {
       document.querySelector("#detail-title").textContent = record.title;
       document.querySelector("#detail-id").textContent = record.id;
       document.querySelector("#detail-project").textContent = projectName;
+      document.querySelector("#detail-summary").textContent = record.summary ?? "No summary available.";
       details.hidden = false;
       deleteButton.hidden = false;
       showMessage(status, "");

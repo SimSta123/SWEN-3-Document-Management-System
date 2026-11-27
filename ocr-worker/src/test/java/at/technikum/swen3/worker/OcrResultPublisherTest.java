@@ -14,12 +14,12 @@ class OcrResultPublisherTest {
     @Test
     void publishesPersistentJsonWithEscapedTextAndDocumentId() {
         var rabbit = mock(RabbitTemplate.class);
-        var publisher = new OcrResultPublisher(rabbit, "test.ocr.completed");
+        var publisher = new OcrResultPublisher(rabbit, "test.ocr");
         String text = "Hello \"World\"\nGrüße";
         publisher.publish(42, text);
 
         var message = ArgumentCaptor.forClass(Message.class);
-        verify(rabbit).send(eq("test.ocr.completed"), message.capture());
+        verify(rabbit).send(eq("test.ocr"), eq(""), message.capture());
         var json = JsonMapper.builder().build().readTree(message.getValue().getBody());
         assertThat(json.get("documentId").asLong()).isEqualTo(42);
         assertThat(json.get("text").asString()).isEqualTo(text);
