@@ -23,7 +23,7 @@ function requestError(error, fallback) {
     : fallback;
 }
 
-function addGroup(container, name, records, onDelete) {
+function addGroup(container, name, records, onDelete, projectId) {
   const group = document.createElement("details");
   group.className = "project-group";
   group.open = true;
@@ -91,7 +91,92 @@ function addGroup(container, name, records, onDelete) {
     }
     group.append(list);
   }
+  if (projectId != null) addProjectSummary(group, projectId);
   container.append(group);
+}
+
+function addProjectSummary(group, projectId) {
+  const path = `/projects/${encodeURIComponent(projectId)}/summary`;
+  const panel = document.createElement("details");
+  panel.className = "project-summary";
+  const heading = document.createElement("summary");
+  heading.textContent = "AI project summary";
+
+  const content = document.createElement("div");
+  content.className = "project-summary-content";
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "button secondary";
+  button.textContent = "Generate AI summary";
+  button.disabled = true;
+
+  const status = document.createElement("p");
+  status.setAttribute("role", "status");
+  status.hidden = true;
+  const output = document.createElement("p");
+  output.className = "project-summary-text";
+  output.hidden = true;
+
+  content.append(button, status, output);
+  panel.append(heading, content);
+  group.append(panel);
+
+  let loading = false;
+  let active = false;
+  let pollTimer;
+
+  function isOpen() {
+    return panel.isConnected && panel.open && group.open;
+  }
+
+  function showState(state) {
+    active = state.status === "WAITING" || state.status === "QUEUED";
+    output.textContent = state.summary ?? "";
+    output.hidden = !state.summary;
+    button.textContent = state.summary ? "Regenerate AI summary" : "Generate AI summary";
+    button.disabled = active || state.totalDocuments === 0;
+
+    if (state.status === "WAITING") {
+      showMessage(status, `${state.readyDocuments} of ${state.totalDocuments} PDF summaries ready.`);
+    } else if (state.status === "QUEUED") {
+      showMessage(status, "Generating the project summary…");
+    } else if (state.status === "FAILED") {
+      showMessage(status, "Could not generate the project summary.", "error");
+    } else if (state.status === "COMPLETED") {
+      showMessage(status, "Project summary ready.", "success");
+    } else if (state.totalDocuments === 0) {
+      showMessage(status, "Add a PDF to this project to generate a summary.");
+    } else {
+      showMessage(status, "");
+    }
+  }
+
+  async function load(method = "GET") {
+    clearTimeout(pollTimer);
+    if (loading || !isOpen()) return;
+
+    loading = true;
+    button.disabled = true;
+    if (method === "POST") showMessage(status, "Starting the project summary…");
+
+    try {
+      showState(await api(path, { method }));
+    } catch (error) {
+      active = active && method === "GET" && (!error.status || error.status >= 500);
+      button.disabled = active;
+      const fallback = active
+        ? "Could not refresh the project summary. Retrying…"
+        : "Could not load or start the project summary. Try again.";
+      showMessage(status, requestError(error, fallback), "error");
+    } finally {
+      loading = false;
+      if (active && isOpen()) pollTimer = setTimeout(load, 3000);
+    }
+  }
+
+  panel.addEventListener("toggle", () => load());
+  group.addEventListener("toggle", () => load());
+  button.addEventListener("click", () => load("POST"));
 }
 
 function startDashboard() {
@@ -164,7 +249,7 @@ function startDashboard() {
       for (const project of projects) {
         const projectRecords = records.filter(record => record.projectId === project.id);
         if (!term || projectRecords.length) {
-          addGroup(groups, project.name, projectRecords, () => deleteProject(project));
+          addGroup(groups, project.name, projectRecords, () => deleteProject(project), project.id);
         }
       }
       const unassigned = records.filter(record => record.projectId == null);

@@ -9,15 +9,19 @@ import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
+import at.technikum.swen3.paperless.service.ProjectSummaryService;
+import at.technikum.swen3.paperless.service.model.SummaryState;
 
 import java.util.List;
 
 @RestController
 public class ProjectController {
     private final ProjectService service;
+    private final ProjectSummaryService projectSummaries;
 
-    public ProjectController(ProjectService service) {
+    public ProjectController(ProjectService service, ProjectSummaryService projectSummaries) {
         this.service = service;
+        this.projectSummaries = projectSummaries;
     }
 
     public record CreateProjectRequest(@NotBlank @Size(max = 200) String name, @Size(max = 2000) String description) {}
@@ -59,5 +63,22 @@ public class ProjectController {
         httpRequest.setAttribute("logMessage", "Requesting to delete project with id: %s".formatted(projectId));
 
         service.deleteProject(projectId);
+    }
+
+    @PostMapping("/projects/{projectId}/summary")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public SummaryState startSummary(@PathVariable long projectId, HttpServletRequest httpRequest) {
+        httpRequest.setAttribute("logMessage", "Requesting to post a summary for Project id: %s".formatted(projectId));
+
+        projectSummaries.startSummary(projectId);
+        projectSummaries.tryQueue(projectId);
+        return projectSummaries.getStatus(projectId);
+    }
+
+    @GetMapping("/projects/{projectId}/summary")
+    public SummaryState getSummary(@PathVariable long projectId, HttpServletRequest httpRequest) {
+        httpRequest.setAttribute("logMessage", "Requesting to get a summary for Project id: %s".formatted(projectId));
+
+        return projectSummaries.getStatus(projectId);
     }
 }

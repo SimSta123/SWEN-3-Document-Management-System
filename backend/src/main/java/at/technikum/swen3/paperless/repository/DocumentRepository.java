@@ -17,4 +17,6 @@ public interface DocumentRepository extends JpaRepository<DocumentEntity, Long> 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select d from DocumentEntity d where d.id = :id")
     Optional<DocumentEntity> findForDeletion(@Param("id") Long id);
+    @Query("select p.id from DocumentEntity d join d.project p where d.id = :documentId")
+    Optional<Long> findProjectIdByDocumentId(@Param("documentId") long documentId);
 }

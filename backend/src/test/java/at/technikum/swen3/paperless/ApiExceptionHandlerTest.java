@@ -3,12 +3,10 @@ package at.technikum.swen3.paperless;
 import at.technikum.swen3.paperless.controller.ApiExceptionHandler;
 import at.technikum.swen3.paperless.controller.DocumentController;
 import at.technikum.swen3.paperless.controller.ProjectController;
+import at.technikum.swen3.paperless.rabbitMQ.ProjectSummaryRequestPublisher;
 import at.technikum.swen3.paperless.repository.DocumentRepository;
 import at.technikum.swen3.paperless.repository.ProjectRepository;
-import at.technikum.swen3.paperless.service.DefaultDocumentService;
-import at.technikum.swen3.paperless.service.DefaultProjectService;
-import at.technikum.swen3.paperless.service.DocumentService;
-import at.technikum.swen3.paperless.service.ElasticsearchClient;
+import at.technikum.swen3.paperless.service.*;
 import at.technikum.swen3.paperless.service.mapping.ProjectMapper;
 import at.technikum.swen3.paperless.storage.DocumentStorage;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,9 +45,9 @@ class ApiExceptionHandlerTest {
         documents = mock(DocumentRepository.class);
         Logger logger = mock(Logger.class);
         var service = new DefaultProjectService(mock(ProjectRepository.class), documents, mock(ProjectMapper.class), logger, publisher);
+        var summService = new DefaultProjectSummaryService(mock(ProjectRepository.class), documents, mock(ProjectSummaryRequestPublisher.class));
         var docService =  new DefaultDocumentService(documents, mock(ProjectMapper.class), logger, publisher, mock(DocumentStorage.class), mock(ElasticsearchClient.class));
-        mvc = MockMvcBuilders.standaloneSetup(
-                        new ProjectController(service),
+        mvc = MockMvcBuilders.standaloneSetup(new ProjectController(service, summService),
                         new DocumentController(docService))
                 .setControllerAdvice(new ApiExceptionHandler(logger))
                 .build();
