@@ -8,8 +8,6 @@ Yann Polini and Simon Stangelberger
 
 Paperless is our document management system for SWEN3. We upload PDFs, organise them into projects and search their contents. The app reads each PDF with OCR and automatically generates an AI summary. We can also generate one summary for an entire project.
 
-The local code walkthrough is maintained separately in CodeAtlas. Open `output/swen3-atlas.html` from the CodeAtlas folder.
-
 ## Run the project
 
 You need Docker Desktop with Linux containers enabled.
