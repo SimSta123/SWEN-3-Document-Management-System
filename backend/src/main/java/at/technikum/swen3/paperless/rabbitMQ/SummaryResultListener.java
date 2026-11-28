@@ -34,12 +34,20 @@ public class SummaryResultListener {
             throw new AmqpRejectAndDontRequeueException("Invalid summary JSON", exception);
         }
 
-        if (result == null || result.documentId() <= 0
-                || result.summary() == null || result.summary().isBlank()) {
+        if (result == null || result.documentId() <= 0) {
             throw new AmqpRejectAndDontRequeueException("Invalid summary result");
         }
+        boolean hasSummary = result.summary() != null && !result.summary().isBlank();
+        boolean failed = Boolean.TRUE.equals(result.failed());
+        if (hasSummary == failed) {
+            throw new AmqpRejectAndDontRequeueException("Expected either a document summary or a failure");
+        }
 
-        documentService.saveSummary(result.documentId(), result.summary());
+        if (failed) {
+            documentService.markSummaryFailed(result.documentId());
+        } else {
+            documentService.saveSummary(result.documentId(), result.summary());
+        }
 
         documents.findProjectIdByDocumentId(result.documentId()).ifPresent(projectSummaries::tryQueue);
     }
@@ -69,6 +77,6 @@ public class SummaryResultListener {
         projectSummaries.applyResult(result);
     }
 
-    private record SummaryResult(long documentId, String summary) {}
+    private record SummaryResult(long documentId, String summary, Boolean failed) {}
     public record ProjectSummaryResult(long projectId, UUID requestId, String summary, String errorMessage) {}
 }

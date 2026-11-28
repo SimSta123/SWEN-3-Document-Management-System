@@ -175,24 +175,14 @@ public class DefaultDocumentService implements DocumentService {
             throw new InvalidInputException("Document summary must not be blank");
         }
 
-        String normalized = summary.strip();
+        documents.findForDeletion(documentId)
+                .filter(document -> !document.hasSummary())
+                .ifPresent(document -> document.setSummary(summary.strip()));
+    }
 
-        /*
-        //Wenn schon eine Summary da ist, wirf eine Exception
-        //Es kann noch eine kommen wenn zb bug oder rabbit Abgestürt
-        documents.findForDeletion(documentId).ifPresent(document -> {
-            if (document.getSummary() != null) {
-                throw new IllegalStateException(
-                        "Document " + documentId + " already has a summary");
-            }
-
-            document.setSummary(normalized);
-        });
-         */
-
-// Bei erneuter Zustellung bleibt die bereits gespeicherte Summary erhalten.
-        documents.findForDeletion(documentId).filter(document -> document.getSummary() == null
-                        || document.getSummary().isBlank())
-                .ifPresent(document -> document.setSummary(normalized));
+    @Override
+    @Transactional
+    public void markSummaryFailed(long documentId) {
+        documents.findForDeletion(documentId).ifPresent(DocumentEntity::markSummaryFailed);
     }
 }

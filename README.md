@@ -145,7 +145,7 @@ Use `docker compose logs -f ocr-worker` for worker logs and the RabbitMQ managem
 
 ## Summary worker
 
-The `summary-worker` directory is a separate Spring Boot application for Sprint 5. Compose starts it after RabbitMQ is healthy and passes in `OPENAI_API_KEY` from the local `.env`. The worker scaffold starts with an empty key for local builds and CI. Summary processing will be added to this worker.
+The `summary-worker` consumes OCR results from its own RabbitMQ queue. Set `OPENAI_API_KEY` in the local `.env` to generate file summaries and project descriptions. Worker logs show the document ID and outcome. Failed file jobs go to `document.genai.requested.failed`. A project summary uses the available file summaries once its pending file jobs finish. A project with no usable file summaries can be retried after adding a readable PDF.
 
 ```sh
 docker compose logs summary-worker

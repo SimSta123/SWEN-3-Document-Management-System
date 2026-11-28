@@ -32,6 +32,9 @@ public class DocumentEntity {
     @Column(name = "summary", columnDefinition = "TEXT")
     private String summary;
 
+    @Column(name = "summary_failed", nullable = false)
+    private boolean summaryFailed;
+
     protected DocumentEntity() {}
 
     public DocumentEntity(String title) {
@@ -57,7 +60,22 @@ public class DocumentEntity {
         this.project = project;
     }
 
-    public String getSummary() { return summary;}
+    public String getSummary() { return summary; }
 
-    public void setSummary(String summary) {this.summary = summary;}
+    public boolean hasSummary() {
+        return summary != null && !summary.isBlank();
+    }
+
+    public boolean isSummaryFailed() { return summaryFailed; }
+
+    public void setSummary(String summary) {
+        this.summary = summary;
+        this.summaryFailed = false;
+    }
+
+    public void markSummaryFailed() {
+        if (!hasSummary()) {
+            summaryFailed = true;
+        }
+    }
 }

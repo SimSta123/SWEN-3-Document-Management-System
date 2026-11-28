@@ -14,4 +14,5 @@ public interface DocumentService {
     void deleteDocument(Long documentId) throws IOException;
     List<Document> searchDocuments(String term) throws IOException;
     void saveSummary(long documentId, String summary);
+    void markSummaryFailed(long documentId);
 }

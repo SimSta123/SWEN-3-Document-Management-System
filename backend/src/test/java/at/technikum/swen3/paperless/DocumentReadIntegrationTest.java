@@ -1,5 +1,6 @@
 package at.technikum.swen3.paperless;
 
+import at.technikum.swen3.paperless.rabbitMQ.SummaryResultListener;
 import at.technikum.swen3.paperless.repository.DocumentRepository;
 import at.technikum.swen3.paperless.repository.ProjectRepository;
 import at.technikum.swen3.paperless.service.DocumentService;
@@ -22,6 +23,8 @@ import java.nio.charset.StandardCharsets;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 import org.springframework.amqp.AmqpException;
+import org.springframework.amqp.core.Message;
+import org.mockito.ArgumentCaptor;
 
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -39,6 +42,7 @@ class DocumentReadIntegrationTest {
     @Autowired private DocumentService docService;
     @Autowired private DocumentRepository documents;
     @Autowired private ProjectRepository projects;
+    @Autowired private SummaryResultListener summaryResults;
 
     @BeforeEach
     void clearRecords() {
@@ -162,6 +166,68 @@ class DocumentReadIntegrationTest {
                     .POST(HttpRequest.BodyPublishers.ofByteArray(body.toByteArray())).build();
             return client.send(request, HttpResponse.BodyHandlers.ofString());
         }
+    }
+
+    @Test
+    void failedFileDoesNotPreventTheNextSummaryFromBeingSavedAndUsed() throws Exception {
+        var project = service.createProject("Two PDFs", "");
+        long failedId = addPdfToProject(project.id(), "First PDF");
+        long nextId = addPdfToProject(project.id(), "Second PDF");
+        String path = "/projects/" + project.id() + "/summary";
+
+        assertThat(request("POST", path, null).body()).contains("\"status\":\"WAITING\"");
+        receiveSummaryResult("{\"documentId\":" + failedId + ",\"failed\":true}");
+        assertThat(documents.findById(failedId).orElseThrow().isSummaryFailed()).isTrue();
+        assertThat(request("GET", path, null).body()).contains("\"status\":\"WAITING\"");
+
+        receiveSummaryResult("{\"documentId\":" + nextId + ",\"summary\":\"Second PDF summary\"}");
+
+        assertThat(documents.findById(nextId).orElseThrow().getSummary()).isEqualTo("Second PDF summary");
+        assertThat(request("GET", path, null).body())
+                .contains("\"status\":\"QUEUED\"", "\"readyDocuments\":1", "\"totalDocuments\":2");
+        var published = ArgumentCaptor.forClass(Message.class);
+        verify(rabbit).send(eq(""), eq("project.summary.requested"), published.capture());
+        assertThat(new String(published.getValue().getBody(), StandardCharsets.UTF_8))
+                .contains("Second PDF summary").doesNotContain("First PDF");
+
+        var requestId = projects.findById(project.id()).orElseThrow().getSummaryRequestId();
+        String projectResult = "{\"projectId\":" + project.id() + ",\"requestId\":\"" + requestId
+                + "\",\"summary\":\"Project description\"}";
+        summaryResults.receiveProjectSummary(new Message(projectResult.getBytes(StandardCharsets.UTF_8)));
+        assertThat(request("GET", path, null).body())
+                .contains("\"status\":\"COMPLETED\"", "\"summary\":\"Project description\"");
+    }
+
+    @Test
+    void projectWithOnlyFailedFilesCanRetryAndLateFailuresKeepSavedSummaries() throws Exception {
+        var project = service.createProject("One PDF", "");
+        long documentId = addPdfToProject(project.id(), "Retry PDF");
+        String path = "/projects/" + project.id() + "/summary";
+
+        assertThat(request("POST", path, null).body()).contains("\"status\":\"WAITING\"");
+        String failure = "{\"documentId\":" + documentId + ",\"failed\":true}";
+        receiveSummaryResult(failure);
+        assertThat(request("GET", path, null).body()).contains("\"status\":\"FAILED\"");
+
+        receiveSummaryResult("{\"documentId\":" + documentId + ",\"summary\":\"Recovered summary\"}");
+        receiveSummaryResult(failure);
+
+        var saved = documents.findById(documentId).orElseThrow();
+        assertThat(saved.getSummary()).isEqualTo("Recovered summary");
+        assertThat(saved.isSummaryFailed()).isFalse();
+        assertThat(request("POST", path, null).body()).contains("\"status\":\"QUEUED\"");
+    }
+
+    private long addPdfToProject(long projectId, String title) throws Exception {
+        assertThat(upload(PDF_HEADER, title).statusCode()).isEqualTo(201);
+        long id = documents.findAll().stream().filter(file -> file.getTitle().equals(title))
+                .findFirst().orElseThrow().getId();
+        service.assignDocument(projectId, id);
+        return id;
+    }
+
+    private void receiveSummaryResult(String json) {
+        summaryResults.receive(new Message(json.getBytes(StandardCharsets.UTF_8)));
     }
 
     private static final byte[] PDF_HEADER = "%PDF-1.4\n".getBytes(StandardCharsets.US_ASCII);

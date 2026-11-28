@@ -25,20 +25,36 @@ public class SummaryListener {
 
     @RabbitListener(queues = "${paperless.summary.request-queue}")
     public void receiveText(Message message) {
-        OcrResult result = json.readValue(message.getBody(), OcrResult.class);
-        logger.info("got from documentId: {}, Text: {}", result.documentId(), result.text());
-
+        OcrResult result;
+        try {
+            result = json.readValue(message.getBody(), OcrResult.class);
+        } catch (JacksonException exception) {
+            throw new AmqpRejectAndDontRequeueException("Invalid OCR result JSON");
+        }
         if (result == null || result.documentId() <= 0 || result.text() == null) {
             throw new AmqpRejectAndDontRequeueException("Invalid OCR result");
         }
 
+        long documentId = result.documentId();
+        logger.info("Document summary started: documentId={}", documentId);
         if (result.text().isBlank()) {
-            return;
+            throw failDocument(documentId, "empty OCR text");
         }
 
-        String summary = summaryService.summarize(result.text());
-        logger.info("summary: {}", summary);
-        publisher.publish(new SummaryResult(result.documentId(), summary));
+        String summary;
+        try {
+            summary = summaryService.summarize(result.text());
+        } catch (RuntimeException exception) {
+            throw failDocument(documentId, exception.getClass().getSimpleName());
+        }
+        publisher.publish(new SummaryResult(documentId, summary, false));
+        logger.info("Document summary succeeded: documentId={}", documentId);
+    }
+
+    private AmqpRejectAndDontRequeueException failDocument(long documentId, String reason) {
+        logger.warn("Document summary failed: documentId={}, category={}", documentId, reason);
+        publisher.publish(new SummaryResult(documentId, null, true));
+        return new AmqpRejectAndDontRequeueException("Document summary failed for document " + documentId);
     }
 
     @RabbitListener(queues = "${paperless.summary.project-request-queue}")
@@ -48,7 +64,7 @@ public class SummaryListener {
         try {
             request = json.readValue(message.getBody(), ProjectSummaryRequest.class);
         } catch (JacksonException exception) {
-            throw new AmqpRejectAndDontRequeueException("Invalid project summary JSON", exception);
+            throw new AmqpRejectAndDontRequeueException("Invalid project summary JSON");
         }
 
         // IDs für die Zuordnung und verwendbare Quellen für den AI Aufruf prüfen

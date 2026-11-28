@@ -133,7 +133,9 @@ function addProjectSummary(group, projectId) {
     active = state.status === "WAITING" || state.status === "QUEUED";
     output.textContent = state.summary ?? "";
     output.hidden = !state.summary;
-    button.textContent = state.summary ? "Regenerate AI summary" : "Generate AI summary";
+    button.textContent = state.status === "FAILED"
+      ? "Retry AI summary"
+      : state.summary ? "Regenerate AI summary" : "Generate AI summary";
     button.disabled = active || state.totalDocuments === 0;
 
     if (state.status === "WAITING") {
@@ -141,7 +143,10 @@ function addProjectSummary(group, projectId) {
     } else if (state.status === "QUEUED") {
       showMessage(status, "Generating the project summary…");
     } else if (state.status === "FAILED") {
-      showMessage(status, "Could not generate the project summary.", "error");
+      const message = state.readyDocuments === 0
+        ? "No file summaries are available. Add a readable PDF and retry."
+        : "Could not generate the project summary. You can retry.";
+      showMessage(status, message, "error");
     } else if (state.status === "COMPLETED") {
       showMessage(status, "Project summary ready.", "success");
     } else if (state.totalDocuments === 0) {

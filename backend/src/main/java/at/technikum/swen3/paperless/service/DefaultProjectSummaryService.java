@@ -35,25 +35,22 @@ public class DefaultProjectSummaryService implements ProjectSummaryService {
     public void startSummary(long projectId) {
         ProjectEntity project = projects.findForUpdate(projectId).orElseThrow(() -> new NotFoundException("Project not found"));
 
-        List<DocumentEntity> pdfs = findProjectPdfs(projectId);
         ProjectSummaryStatus status = project.getSummaryStatus();
-
         if (status == ProjectSummaryStatus.WAITING || status == ProjectSummaryStatus.QUEUED) {
-            toState(project, pdfs);
             return;
         }
 
-        if (pdfs.isEmpty()) {
+        if (findProjectPdfs(projectId).isEmpty()) {
             throw new InvalidInputException("The project has no PDFs");
         }
 
         project.startSummaryRequest(UUID.randomUUID());
-        toState(project, pdfs);
     }
 
     @Override
     @Transactional
-    public void tryQueue(long projectId) {ProjectEntity project = projects.findForUpdate(projectId).orElse(null);
+    public void tryQueue(long projectId) {
+        ProjectEntity project = projects.findForUpdate(projectId).orElse(null);
 
         if (project == null || project.getSummaryStatus() != ProjectSummaryStatus.WAITING) {
             return;
@@ -61,22 +58,21 @@ public class DefaultProjectSummaryService implements ProjectSummaryService {
 
         List<DocumentEntity> pdfs = findProjectPdfs(projectId);
 
-        if (pdfs.isEmpty()) {
-            project.failSummary();
-            return;
-        }
-
-        SummaryState state = toState(project, pdfs);
-        if (!state.readyToQueue()) {
+        if (pdfs.stream().anyMatch(pdf -> !pdf.hasSummary() && !pdf.isSummaryFailed())) {
             return;
         }
 
         List<ProjectSummaryRequest.SummarySource> sources = pdfs.stream()
+                .filter(DocumentEntity::hasSummary)
                 .map(pdf -> new ProjectSummaryRequest.SummarySource(pdf.getTitle(), pdf.getSummary()))
                 .toList();
+        if (sources.isEmpty()) {
+            project.failSummary();
+            return;
+        }
 
         project.markSummaryQueued();
-        publisher.publish(new ProjectSummaryRequest(projectId, state.requestId(), sources));
+        publisher.publish(new ProjectSummaryRequest(projectId, project.getSummaryRequestId(), sources));
     }
 
     @Override
@@ -93,8 +89,7 @@ public class DefaultProjectSummaryService implements ProjectSummaryService {
     }
 
     private SummaryState toState(ProjectEntity project, List<DocumentEntity> pdfs) {
-        long readyDocuments = pdfs.stream().filter(document -> document.getSummary() != null
-                        && !document.getSummary().isBlank()).count();
+        long readyDocuments = pdfs.stream().filter(DocumentEntity::hasSummary).count();
 
         return new SummaryState(project.getSummaryRequestId(), project.getSummaryStatus(), readyDocuments, pdfs.size(), project.getSummary());
     }
