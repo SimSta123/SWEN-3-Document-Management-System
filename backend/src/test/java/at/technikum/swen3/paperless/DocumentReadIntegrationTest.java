@@ -8,6 +8,11 @@ import at.technikum.swen3.paperless.service.ProjectService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ContentDisposition;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.ActiveProfiles;
@@ -18,6 +23,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.io.ByteArrayOutputStream;
+import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -251,6 +257,50 @@ class DocumentReadIntegrationTest {
     }
 
     private static final byte[] PDF_HEADER = "%PDF-1.4\n".getBytes(StandardCharsets.US_ASCII);
+
+    @Test
+    void storedPdfIsAvailableInlineWithItsOriginalFilename() throws Exception {
+        assertThat(upload(PDF_HEADER, "A different title").statusCode()).isEqualTo(201);
+        var document = documents.findAll().getFirst();
+        when(s3.getObject(any(GetObjectRequest.class))).thenAnswer(invocation ->
+                new ResponseInputStream<>(GetObjectResponse.builder().build(), new ByteArrayInputStream(PDF_HEADER)));
+
+        assertThat(request("GET", "/documents/" + document.getId(), null).body()).contains("\"hasPdf\":true");
+        String path = "/documents/" + document.getId() + "/pdf";
+        var response = request("GET", path, null);
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.headers().firstValue("Content-Type")).contains("application/pdf");
+        var disposition = ContentDisposition.parse(response.headers().firstValue("Content-Disposition").orElseThrow());
+        assertThat(disposition.isInline()).isTrue();
+        assertThat(disposition.getFilename()).isEqualTo("notes.pdf");
+        assertThat(response.body()).isEqualTo(new String(PDF_HEADER, StandardCharsets.US_ASCII));
+        verify(s3).getObject(argThat((GetObjectRequest request) -> request.key().equals(document.getObjectKey())));
+
+        try (HttpClient client = HttpClient.newHttpClient()) {
+            var rangeRequest = HttpRequest.newBuilder(URI.create("http://localhost:" + port + path))
+                    .timeout(Duration.ofSeconds(10)).header("Range", "bytes=0-4").build();
+            var range = client.send(rangeRequest, HttpResponse.BodyHandlers.ofString());
+            assertThat(range.statusCode()).isEqualTo(206);
+            assertThat(range.body()).isEqualTo("%PDF-");
+        }
+    }
+
+    @Test
+    void openingPdfHandlesLegacyAndMissingFiles() throws Exception {
+        var legacy = docService.createDocument("Title only");
+        assertThat(request("GET", "/documents/" + legacy.id() + "/pdf", null).statusCode()).isEqualTo(404);
+        assertThat(request("GET", "/documents/0/pdf", null).statusCode()).isEqualTo(400);
+        assertThat(request("GET", "/documents/9223372036854775807/pdf", null).statusCode()).isEqualTo(404);
+        verify(s3, never()).getObject(any(GetObjectRequest.class));
+
+        assertThat(upload(PDF_HEADER, null).statusCode()).isEqualTo(201);
+        var uploaded = documents.findAll().stream().filter(doc -> doc.getObjectKey() != null).findFirst().orElseThrow();
+        String path = "/documents/" + uploaded.getId() + "/pdf";
+        when(s3.getObject(any(GetObjectRequest.class))).thenThrow(S3Exception.builder().statusCode(404).build());
+        assertThat(request("GET", path, null).statusCode()).isEqualTo(404);
+        doThrow(S3Exception.builder().statusCode(503).build()).when(s3).getObject(any(GetObjectRequest.class));
+        assertThat(request("GET", path, null).statusCode()).isEqualTo(503);
+    }
 
     @Test
     void pdfUploadCreatesRecordUsingFilenameAndPublishesMessage() throws Exception {

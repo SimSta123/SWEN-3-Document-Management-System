@@ -54,6 +54,7 @@ public class DocumentEntity {
     public Long getId() { return id; }
     public String getTitle() { return title; }
     public String getObjectKey() { return objectKey; }
+    public String getOriginalFilename() { return originalFilename; }
     public ProjectEntity getProject() { return project; }
 
     public void assignTo(ProjectEntity project) {

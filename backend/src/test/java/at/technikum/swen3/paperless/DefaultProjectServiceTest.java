@@ -176,7 +176,7 @@ class DefaultProjectServiceTest {
     void assignDocumentAssignsAndSavesDocument() {
         ProjectEntity project = new ProjectEntity("University", "");
         DocumentEntity document = new DocumentEntity("Notes");
-        Document expected = new Document(10L, "Notes", 1L, null);
+        Document expected = new Document(10L, "Notes", 1L, null, false);
 
         when(projects.findById(1L)).thenReturn(Optional.of(project));
         when(documents.findById(10L)).thenReturn(Optional.of(document));
@@ -196,7 +196,7 @@ class DefaultProjectServiceTest {
         ProjectEntity newProject = new ProjectEntity("New", "");
         DocumentEntity document = new DocumentEntity("Notes");
         document.assignTo(oldProject);
-        Document expected = new Document(10L, "Notes", 2L, null);
+        Document expected = new Document(10L, "Notes", 2L, null, false);
 
         when(projects.findById(2L)).thenReturn(Optional.of(newProject));
         when(documents.findById(10L)).thenReturn(Optional.of(document));
@@ -215,7 +215,7 @@ class DefaultProjectServiceTest {
         ProjectEntity project = new ProjectEntity("University", "");
         DocumentEntity document = new DocumentEntity("Notes");
         document.assignTo(project);
-        Document expected = new Document(10L, "Notes", 1L, null);
+        Document expected = new Document(10L, "Notes", 1L, null, false);
 
         when(projects.findById(1L)).thenReturn(Optional.of(project));
         when(documents.findById(10L)).thenReturn(Optional.of(document));
@@ -272,8 +272,8 @@ class DefaultProjectServiceTest {
     void listDocumentsInProjectReturnsMappedDocumentsInRepositoryOrder() {
         DocumentEntity first = new DocumentEntity("First");
         DocumentEntity second = new DocumentEntity("Second");
-        Document firstResult = new Document(10L, "First", 1L, null);
-        Document secondResult = new Document(11L, "Second", 1L, null);
+        Document firstResult = new Document(10L, "First", 1L, null, false);
+        Document secondResult = new Document(11L, "Second", 1L, null, false);
 
         when(projects.existsById(1L)).thenReturn(true);
         when(documents.findByProjectIdOrderByIdAsc(1L)).thenReturn(List.of(first, second));

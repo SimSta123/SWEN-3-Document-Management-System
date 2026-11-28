@@ -8,12 +8,15 @@ import at.technikum.swen3.paperless.service.exception.InvalidInputException;
 import at.technikum.swen3.paperless.service.exception.NotFoundException;
 import at.technikum.swen3.paperless.service.mapping.ProjectMapper;
 import at.technikum.swen3.paperless.service.model.Document;
+import at.technikum.swen3.paperless.service.model.DocumentPdf;
 import at.technikum.swen3.paperless.storage.DocumentStorage;
 import org.slf4j.Logger;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
@@ -105,19 +108,45 @@ public class DefaultDocumentService implements DocumentService {
 
     @Override
     public Document getDocument(Long documentId) {
+        Document document = mapper.toDocument(findDocument(documentId));
+        logger.debug("Fetched documentId={}", documentId);
+        return document;
+    }
+
+    @Override
+    public DocumentPdf getPdf(Long documentId) throws IOException {
+        DocumentEntity document = findDocument(documentId);
+        String key = document.getObjectKey();
+        if (key == null) {
+            throw new NotFoundException("This document has no stored PDF");
+        }
+
+        String filename = document.getOriginalFilename();
+        if (filename == null || filename.isBlank()) {
+            filename = document.getTitle();
+        }
+        try (var input = storeDocument.download(key)) {
+            return new DocumentPdf(filename, input.readAllBytes());
+        } catch (SdkException error) {
+            if (error instanceof S3Exception storageError && storageError.statusCode() == 404) {
+                throw new NotFoundException("The stored PDF could not be found");
+            }
+            throw new IOException("Could not read the stored PDF", error);
+        }
+    }
+
+    private DocumentEntity findDocument(Long documentId) {
         if (documentId == null || documentId <= 0) {
             logger.debug("Getting document failed, cause: document id must be positive, got id: {}", documentId);
             throw new InvalidInputException("Document id must be positive");
         }
 
-        Document documentGet = documents.findById(documentId).map(mapper::toDocument)
+        return documents.findById(documentId)
                 .orElseThrow(() -> {
                     logger.debug("Getting document failed, cause: document id not found, got id: {}", documentId);
                     return new NotFoundException("Document not found");
                 });
 
-        logger.debug("Fetched documentId={}", documentId);
-        return documentGet;
     }
 
     @Override

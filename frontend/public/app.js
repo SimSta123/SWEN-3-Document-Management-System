@@ -619,6 +619,7 @@ function startDetail() {
   const refresh = document.querySelector("#refresh");
   const status = document.querySelector("#detail-status");
   const details = document.querySelector("#document-details");
+  const openPdf = document.querySelector("#open-pdf");
   const heading = document.querySelector("#document-heading");
   const deleteButton = document.querySelector("#delete-document");
   const backLabel = document.querySelector("#back-label");
@@ -660,10 +661,13 @@ function startDetail() {
       const summary = document.querySelector("#detail-summary");
       summary.textContent = record.summary || "No summary available.";
       summary.classList.toggle("muted", !record.summary);
+      openPdf.href = "/api/documents/" + encodeURIComponent(id) + "/pdf";
+      openPdf.hidden = !record.hasPdf;
       details.hidden = false;
       deleteButton.hidden = false;
       showMessage(status, "");
     } catch (error) {
+      openPdf.hidden = true;
       details.hidden = true;
       deleteButton.hidden = true;
       heading.textContent = error.status === 404 ? "Document not found" : "Document";

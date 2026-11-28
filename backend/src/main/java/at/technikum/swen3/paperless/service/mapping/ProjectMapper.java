@@ -13,5 +13,6 @@ public interface ProjectMapper {
     Project toProject(ProjectEntity entity);
 
     @Mapping(target = "projectId", source = "project.id")
+    @Mapping(target = "hasPdf", expression = "java(entity.getObjectKey() != null)")
     Document toDocument(DocumentEntity entity);
 }

@@ -445,6 +445,7 @@ dialog[data-busy] [data-close] { opacity: .5; cursor: default; }
 
 .detail-toolbar { justify-content: space-between; flex-wrap: wrap; margin-bottom: 19px; }
 .detail-toolbar .actions { margin-left: auto; }
+#open-pdf { text-decoration: none; }
 .back-link { font-size: 14px; font-weight: 650; text-decoration: none; overflow-wrap: anywhere; }
 .back-link:hover { text-decoration: underline; }
 .back-link .icon { width: 16px; height: 16px; }

@@ -8,7 +8,11 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,6 +21,7 @@ import java.util.List;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Locale;
 
 @RestController
 public class DocumentController {
@@ -82,6 +87,26 @@ public class DocumentController {
         httpRequest.setAttribute("logMessage", "Requesting to get document with id: %s".formatted(documentId));
 
         return service.getDocument(documentId);
+    }
+
+    @GetMapping("/documents/{documentId}/pdf")
+    public ResponseEntity<ByteArrayResource> openPdf(@PathVariable Long documentId, HttpServletRequest httpRequest)
+            throws IOException {
+        httpRequest.setAttribute("logMessage", "Requesting PDF for document id: %s".formatted(documentId));
+        var pdf = service.getPdf(documentId);
+        String filename = pdf.filename().replace('\\', '/');
+        filename = filename.substring(filename.lastIndexOf('/') + 1).replaceAll("\\p{Cntrl}", "_").strip();
+        if (filename.isEmpty()) {
+            filename = "document.pdf";
+        } else if (!filename.toLowerCase(Locale.ROOT).endsWith(".pdf")) {
+            filename += ".pdf";
+        }
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.inline()
+                        .filename(filename, StandardCharsets.UTF_8).build().toString())
+                .header("X-Content-Type-Options", "nosniff")
+                .body(new ByteArrayResource(pdf.bytes()));
     }
 
     @DeleteMapping("/documents/{documentId}")
