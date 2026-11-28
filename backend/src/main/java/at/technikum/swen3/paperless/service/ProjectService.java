@@ -8,6 +8,7 @@ public interface ProjectService {
     Project createProject(String name, String description);
     List<Project> listProjects();
     Document assignDocument(Long projectId, Long documentId);
+    void unassignDocument(Long documentId);
     List<Document> listDocumentsInProject(Long projectId);
     void deleteProject(Long projectId);
 }

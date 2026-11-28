@@ -50,6 +50,12 @@ public class ProjectController {
     }
 
 
+    @DeleteMapping("/documents/{documentId}/project")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void unassignDocument(@PathVariable Long documentId) {
+        service.unassignDocument(documentId);
+    }
+
     @GetMapping("/projects/{projectId}/documents")
     public List<Document> listDocumentsInProject(@PathVariable Long projectId, HttpServletRequest httpRequest) {
         httpRequest.setAttribute("logMessage", "Requesting to list all documents in project with id: %s".formatted(projectId));

@@ -75,7 +75,9 @@ In the backend, controllers handle HTTP requests, services handle the logic and 
 
 ## Website and API
 
-The dashboard groups documents by project, with an Unassigned group for documents without a project. We can create projects, save a document title, upload a PDF and move documents between projects. A document's detail page shows its title, ID and project. Empty lists, failed requests and missing documents have their own messages.
+The website opens the document library. Use the sidebar to browse projects, All documents or Unassigned. Uploads start in Unassigned. Move a document from its row action or drag it onto a project or Unassigned in the sidebar.
+
+Project pages show the description and AI project summary. Select the icon next to a project name to set its emoji in your browser. A document's detail page shows its document ID, project and AI summary.
 
 Search looks through the OCR text in Elasticsearch and shows the matching documents. A new upload becomes searchable after the worker finishes processing it. Deleting a project leaves its documents unassigned. Deleting a document removes its database record, PDF and search entry. Queued or running OCR jobs cannot bring a successfully deleted document back.
 
@@ -91,6 +93,7 @@ The table below uses the backend paths. When calling through nginx, add `/api`, 
 | GET | `/documents?search=Hello` | Find documents whose OCR text matches the search |
 | GET | `/documents/{documentId}` | Read a document |
 | DELETE | `/documents/{documentId}` | Delete a document, its PDF and its search entry |
+| DELETE | `/documents/{documentId}/project` | Move a document to Unassigned |
 | PUT | `/projects/{projectId}/documents/{documentId}` | Assign or move a document |
 | GET | `/projects/{projectId}/documents` | List a project's documents |
 

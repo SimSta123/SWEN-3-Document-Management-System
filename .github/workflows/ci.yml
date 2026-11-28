@@ -52,7 +52,7 @@ jobs:
       - name: Check frontend and database-backed health route
         run: |
           curl --fail --retry 5 --retry-delay 2 http://localhost:8088/ -o /tmp/paperless.html
-          grep -q 'id="document-form"' /tmp/paperless.html
+          grep -q 'id="upload-form"' /tmp/paperless.html
           curl --fail http://localhost:8088/api/health | python3 -c 'import json,sys; assert json.load(sys.stdin)["status"] == "UP"'
           curl --fail --silent http://localhost:8088/api/documents | python3 -c 'import json,sys; assert json.load(sys.stdin) == []'
           curl --fail --silent -H 'Content-Type: application/json' -d '{"title":"CI document"}' http://localhost:8088/api/documents -o /tmp/created-document.json

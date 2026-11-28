@@ -23,119 +23,65 @@ function requestError(error, fallback) {
     : fallback;
 }
 
-function addGroup(container, name, records, onDelete, projectId) {
-  const group = document.createElement("details");
-  group.className = "project-group";
-  group.open = true;
-  const summary = document.createElement("summary");
-  const label = document.createElement("span");
-  label.className = "group-name";
-  label.textContent = name;
-  const count = document.createElement("span");
-  count.className = "group-count";
-  count.textContent = records.length;
-  summary.append(label, count);
-  if (onDelete) {
-    const deleteButton = document.createElement("button");
-    deleteButton.type = "button";
-    deleteButton.className = "button delete-project";
-    deleteButton.textContent = "Delete";
-    deleteButton.setAttribute("aria-label", `Delete project ${name}`);
-    deleteButton.addEventListener("click", async event => {
-      event.preventDefault();
-      event.stopPropagation();
-      if (deleteButton.disabled) return;
-      deleteButton.disabled = true;
-      deleteButton.textContent = "Deleting…";
-      try {
-        await onDelete();
-      } finally {
-        deleteButton.disabled = false;
-        deleteButton.textContent = "Delete";
-      }
-    });
-    summary.append(deleteButton);
-  }
-  group.append(summary);
-  if (!records.length) {
-    const empty = document.createElement("p");
-    empty.className = "empty-group";
-    empty.textContent = "No documents in this project yet.";
-    group.append(empty);
-  } else {
-    const list = document.createElement("ul");
-    list.className = "document-list";
-    for (const record of records) {
-      const item = document.createElement("li");
-      const link = document.createElement("a");
-      link.className = "document-link";
-      link.href = `/document.html?id=${encodeURIComponent(record.id)}`;
-      const icon = document.createElement("span");
-      icon.className = "document-icon";
-      icon.textContent = "≡";
-      icon.setAttribute("aria-hidden", "true");
-      const name = document.createElement("span");
-      name.className = "document-name";
-      name.textContent = record.title;
-      const id = document.createElement("span");
-      id.className = "document-id";
-      id.textContent = `Document #${record.id}`;
-      name.append(id);
-      const arrow = document.createElement("span");
-      arrow.className = "document-arrow";
-      arrow.textContent = "↗";
-      arrow.setAttribute("aria-hidden", "true");
-      link.append(icon, name, arrow);
-      item.append(link);
-      list.append(item);
-    }
-    group.append(list);
-  }
-  if (projectId != null) addProjectSummary(group, projectId);
-  container.append(group);
-}
-
-function addProjectSummary(group, projectId) {
+function addProjectSummary(container, projectId) {
   const path = `/projects/${encodeURIComponent(projectId)}/summary`;
-  const panel = document.createElement("details");
+  const previousToggle = container.querySelector(".summary-toggle");
+  const wasCollapsed = previousToggle?.dataset.projectId === String(projectId)
+    && previousToggle.getAttribute("aria-expanded") === "false";
+  const panel = document.createElement("section");
   panel.className = "project-summary";
-  const heading = document.createElement("summary");
-  heading.textContent = "AI project summary";
+  const header = document.createElement("div");
+  header.className = "project-summary-header";
+  const heading = document.createElement("h2");
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "summary-toggle";
+  toggle.dataset.projectId = projectId;
+  toggle.setAttribute("aria-controls", "project-summary-body");
+  toggle.textContent = "AI project summary";
+  heading.append(toggle);
 
-  const content = document.createElement("div");
-  content.className = "project-summary-content";
   const button = document.createElement("button");
   button.type = "button";
-  button.className = "button secondary";
-  button.textContent = "Generate AI summary";
+  button.className = "button quiet summary-action";
   button.disabled = true;
+  const buttonLabel = document.createElement("span");
+  button.append(icon("refresh"), buttonLabel);
+
+  function setAction(label) {
+    buttonLabel.textContent = label;
+    button.setAttribute("aria-label", label + " AI summary");
+  }
+  setAction("Generate");
 
   const status = document.createElement("p");
   status.setAttribute("role", "status");
-  status.hidden = true;
+  showMessage(status, "Loading summary…");
   const output = document.createElement("p");
   output.className = "project-summary-text";
   output.hidden = true;
 
-  content.append(button, status, output);
-  panel.append(heading, content);
-  group.append(panel);
+  const body = document.createElement("div");
+  body.id = "project-summary-body";
+  body.append(output, status);
+  function setExpanded(expanded) {
+    toggle.setAttribute("aria-expanded", String(expanded));
+    body.hidden = !expanded;
+  }
+  setExpanded(!wasCollapsed);
+  header.append(heading, button);
+  panel.append(header, body);
+  container.replaceChildren(panel);
 
   let loading = false;
   let active = false;
   let pollTimer;
 
-  function isOpen() {
-    return panel.isConnected && panel.open && group.open;
-  }
-
   function showState(state) {
     active = state.status === "WAITING" || state.status === "QUEUED";
     output.textContent = state.summary ?? "";
     output.hidden = !state.summary;
-    button.textContent = state.status === "FAILED"
-      ? "Retry AI summary"
-      : state.summary ? "Regenerate AI summary" : "Generate AI summary";
+    setAction(state.status === "FAILED" ? "Retry" : state.summary ? "Regenerate" : "Generate");
     button.disabled = active || state.totalDocuments === 0;
 
     if (state.status === "WAITING") {
@@ -147,18 +93,16 @@ function addProjectSummary(group, projectId) {
         ? "No file summaries are available. Add a readable PDF and retry."
         : "Could not generate the project summary. You can retry.";
       showMessage(status, message, "error");
-    } else if (state.status === "COMPLETED") {
-      showMessage(status, "Project summary ready.", "success");
-    } else if (state.totalDocuments === 0) {
-      showMessage(status, "Add a PDF to this project to generate a summary.");
     } else {
-      showMessage(status, "");
+      showMessage(status, state.summary ? "" : state.totalDocuments === 0
+        ? "Add a PDF to generate a summary."
+        : "No AI summary yet.");
     }
   }
 
   async function load(method = "GET") {
     clearTimeout(pollTimer);
-    if (loading || !isOpen()) return;
+    if (loading || !panel.isConnected) return;
 
     loading = true;
     button.disabled = true;
@@ -175,236 +119,499 @@ function addProjectSummary(group, projectId) {
       showMessage(status, requestError(error, fallback), "error");
     } finally {
       loading = false;
-      if (active && isOpen()) pollTimer = setTimeout(load, 3000);
+      if (active && panel.isConnected) pollTimer = setTimeout(load, 3000);
     }
   }
 
-  panel.addEventListener("toggle", () => load());
-  group.addEventListener("toggle", () => load());
-  button.addEventListener("click", () => load("POST"));
+  toggle.addEventListener("click", () => setExpanded(body.hidden));
+  button.addEventListener("click", () => {
+    setExpanded(true);
+    load("POST");
+  });
+  load();
+}
+
+
+function viewUrl(view) {
+  return view === "all" ? "/" : "/?project=" + encodeURIComponent(view);
+}
+
+function icon(name) {
+  const svgNamespace = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNamespace, "svg");
+  const use = document.createElementNS(svgNamespace, "use");
+  svg.setAttribute("class", "icon " + name + "-icon");
+  svg.setAttribute("aria-hidden", "true");
+  use.setAttribute("href", "/icons.svg#" + name);
+  svg.append(use);
+  return svg;
+}
+
+function showDragPreview(transfer, glyph, title) {
+  const card = document.createElement("div");
+  card.className = "drag-preview";
+  card.setAttribute("aria-hidden", "true");
+  const label = document.createElement("span");
+  label.className = "drag-preview-label";
+  label.textContent = title;
+  card.append(glyph.cloneNode(true), label);
+  document.body.append(card);
+  transfer.setDragImage(card, card.offsetWidth / 2, card.offsetHeight / 2);
+  requestAnimationFrame(() => card.remove());
 }
 
 function startDashboard() {
+  const libraryLinks = document.querySelector("#library-links");
+  const projectLinks = document.querySelector("#project-links");
+  const projectInformation = document.querySelector("#project-information");
+  const libraryStatus = document.querySelector("#library-status");
+  const rows = document.querySelector("#document-rows");
   const refresh = document.querySelector("#refresh");
-  const groups = document.querySelector("#document-groups");
-  const status = document.querySelector("#library-status");
-  const count = document.querySelector("#library-count");
-  const form = document.querySelector("#document-form");
-  const title = document.querySelector("#document-title");
-  const save = document.querySelector("#save");
-  const formError = document.querySelector("#form-error");
-  const formStatus = document.querySelector("#form-status");
-
+  const search = document.querySelector("#search-term");
+  const deleteProjectButton = document.querySelector("#delete-project");
+  const uploadDialog = document.querySelector("#upload-dialog");
+  const projectDialog = document.querySelector("#project-dialog");
+  const projectIconButton = document.querySelector("#edit-project-icon");
+  const projectIconDialog = document.querySelector("#project-icon-dialog");
+  const projectIconOptions = document.querySelector("#project-icon-options");
+  const projectIconStatus = document.querySelector("#project-icon-status");
+  const moveDialog = document.querySelector("#move-dialog");
   const uploadForm = document.querySelector("#upload-form");
   const pdfInput = document.querySelector("#pdf-file");
-  const uploadButton = document.querySelector("#upload-button");
-  const uploadStatus = document.querySelector("#upload-status");
   const projectForm = document.querySelector("#project-form");
-  const projectName = document.querySelector("#project-name");
-  const projectDescription = document.querySelector("#project-description");
-  const createProject = document.querySelector("#create-project");
+  const uploadButton = document.querySelector("#upload-button");
+  const createProjectButton = document.querySelector("#create-project");
+  const uploadStatus = document.querySelector("#upload-status");
   const projectStatus = document.querySelector("#project-status");
-  const assignmentForm = document.querySelector("#assignment-form");
-  const assignmentDocument = document.querySelector("#assignment-document");
-  const assignmentProject = document.querySelector("#assignment-project");
-  const assignDocument = document.querySelector("#assign-document");
-  const assignmentStatus = document.querySelector("#assignment-status");
-  const searchForm = document.querySelector("#search-form");
-  const searchTerm = document.querySelector("#search-term");
-  let activeSearch = "";
-  let assigning = false;
+  const moveStatus = document.querySelector("#move-status");
 
-  function fillSelect(select, records, placeholder, label) {
-    const previous = select.value;
-    select.replaceChildren(new Option(placeholder, ""));
-    for (const record of records) select.add(new Option(label(record), String(record.id)));
-    if (records.some(record => String(record.id) === previous)) select.value = previous;
-    select.disabled = !records.length || assigning;
+  let view = new URLSearchParams(window.location.search).get("project") || "all";
+  let term = "";
+  let projects = [];
+  let loadVersion = 0;
+  let draggedDocument = null;
+  let moving = false;
+  const unassignedFolder = { id: null, name: "Unassigned" };
+
+  function selectView(next) {
+    view = next;
+    term = "";
+    search.value = "";
+    window.history.replaceState(null, "", viewUrl(view));
   }
 
-  let loadVersion = 0;
+  function removeDropHighlights() {
+    document.querySelectorAll(".folder-link.drop-target").forEach(link => link.classList.remove("drop-target"));
+  }
+
+  function projectEmojiKey(id) {
+    return "paperless.projectEmoji." + id;
+  }
+
+  function readProjectEmoji(id) {
+    try {
+      return localStorage.getItem(projectEmojiKey(id)) ?? "";
+    } catch {
+      return "";
+    }
+  }
+
+  function projectIcon(id) {
+    return projectGlyph(id == null ? "" : readProjectEmoji(id));
+  }
+
+  function projectGlyph(emoji) {
+    if (!emoji) return icon("folder");
+    const glyph = document.createElement("span");
+    glyph.className = "project-emoji";
+    glyph.setAttribute("aria-hidden", "true");
+    glyph.textContent = emoji;
+    return glyph;
+  }
+
+  function folderLink(name, target, count, folderIcon) {
+    const link = document.createElement("a");
+    link.href = viewUrl(target);
+    link.className = "folder-link";
+    if (String(target) === view) link.setAttribute("aria-current", "page");
+
+    const label = document.createElement("span");
+    label.className = "folder-name";
+    label.textContent = name;
+    const total = document.createElement("span");
+    total.className = "folder-count";
+    total.textContent = count;
+    link.append(folderIcon, label, total);
+    link.addEventListener("dragstart", event => {
+      showDragPreview(event.dataTransfer, link.firstElementChild, name);
+    });
+    return link;
+  }
+
+  function renderFolders(allRecords) {
+    const unassigned = allRecords.filter(record => record.projectId == null).length;
+    const unassignedLink = folderLink(unassignedFolder.name, "unassigned", unassigned, icon("folder"));
+    enableDrop(unassignedLink, unassignedFolder);
+    libraryLinks.replaceChildren(
+      folderLink("All documents", "all", allRecords.length, icon("library")),
+      unassignedLink,
+    );
+    projectLinks.replaceChildren();
+    for (const project of projects) {
+      const count = allRecords.filter(record => record.projectId === project.id).length;
+      const link = folderLink(project.name, project.id, count, projectIcon(project.id));
+      enableDrop(link, project);
+      projectLinks.append(link);
+    }
+  }
+
+  function enableDrop(link, folder) {
+    link.addEventListener("dragover", event => {
+      if (!draggedDocument || moving || draggedDocument.projectId === folder.id) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      removeDropHighlights();
+      link.classList.add("drop-target");
+    });
+    link.addEventListener("dragleave", event => {
+      if (!link.contains(event.relatedTarget)) link.classList.remove("drop-target");
+    });
+    link.addEventListener("drop", event => {
+      event.preventDefault();
+      const record = draggedDocument;
+      draggedDocument = null;
+      removeDropHighlights();
+      if (record) moveDocument(record, folder);
+    });
+  }
+
+  function folderName(record) {
+    return projects.find(project => project.id === record.projectId)?.name ?? unassignedFolder.name;
+  }
+
+  function renderFiles(records) {
+    rows.replaceChildren();
+    for (const record of records) {
+      const row = document.createElement("li");
+      row.className = "file-row";
+
+      const file = document.createElement("a");
+      const params = new URLSearchParams({ id: record.id });
+      if (view !== "all") params.set("project", view);
+      file.href = "/document.html?" + params;
+      file.className = "file-link";
+      file.draggable = true;
+      file.addEventListener("dragstart", event => {
+        draggedDocument = record;
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", String(record.id));
+        showDragPreview(event.dataTransfer, file.firstElementChild, record.title);
+        row.classList.add("is-dragging");
+      });
+      file.addEventListener("dragend", () => {
+        draggedDocument = null;
+        row.classList.remove("is-dragging");
+        removeDropHighlights();
+      });
+
+      const name = document.createElement("span");
+      name.className = "file-name";
+      name.textContent = record.title;
+      file.append(icon("pdf"), name);
+
+      const project = document.createElement("span");
+      project.className = "file-project";
+      project.textContent = folderName(record);
+      const move = document.createElement("button");
+      move.type = "button";
+      move.className = "button quiet icon-button file-move";
+      move.title = "Move document";
+      move.setAttribute("aria-label", "Move " + record.title);
+      move.append(icon("move"));
+      move.disabled = record.projectId == null && projects.length === 0;
+      move.addEventListener("click", () => openMoveDialog(record));
+
+      row.append(file, project, move);
+      rows.append(row);
+    }
+  }
+
+  function renderLibrary(allRecords, records) {
+    const selected = projects.find(project => String(project.id) === view);
+    if (view !== "all" && view !== "unassigned" && !selected) selectView("all");
+    renderFolders(allRecords);
+
+    const visible = records.filter(record => {
+      if (selected) return record.projectId === selected.id;
+      if (view === "unassigned") return record.projectId == null;
+      return true;
+    });
+    document.querySelector("#library-title").textContent =
+      selected?.name ?? (view === "unassigned" ? "Unassigned" : "All documents");
+    projectIconButton.hidden = !selected;
+    if (selected) projectIconButton.replaceChildren(projectIcon(selected.id));
+    const description = selected?.description ?? "";
+    document.querySelector("#project-description-text").textContent = description;
+    document.querySelector("#project-description-view").hidden = !description;
+    if (selected) addProjectSummary(projectInformation, selected.id);
+    else projectInformation.replaceChildren();
+
+    const count = document.querySelector("#library-count");
+    const countParent = document.querySelector(selected ? "#document-list-heading" : "#library-heading");
+    if (count.parentElement !== countParent) countParent.append(count);
+    const countLabel = term ? "search result" : "document";
+    count.textContent = visible.length + " " + countLabel + (visible.length === 1 ? "" : "s");
+    deleteProjectButton.hidden = !selected;
+
+    renderFiles(visible);
+    document.querySelector("#document-list").hidden = !visible.length;
+    document.querySelector("#empty-view").hidden = Boolean(visible.length);
+    document.querySelector("#empty-upload").hidden = Boolean(term || selected);
+    document.querySelector("#empty-text").textContent = term ? "No documents match this search."
+      : selected ? "This project is empty. Move a document here from the library."
+      : "No documents here yet.";
+  }
 
   async function loadLibrary() {
     const version = ++loadVersion;
-    const term = activeSearch;
     refresh.disabled = true;
-    assignmentDocument.disabled = true;
-    assignmentProject.disabled = true;
-    assignDocument.disabled = true;
-    groups.replaceChildren();
-    count.textContent = "Loading documents…";
-    showMessage(status, "Loading your library…");
     try {
       const allDocuments = api("/documents");
-      const [allRecords, projects, records] = await Promise.all([
+      const [allRecords, fetchedProjects, records] = await Promise.all([
         allDocuments,
         api("/projects"),
-        term ? api(`/documents?search=${encodeURIComponent(term)}`) : allDocuments,
+        term ? api("/documents?search=" + encodeURIComponent(term)) : allDocuments,
       ]);
       if (version !== loadVersion) return;
-      fillSelect(assignmentDocument, allRecords, allRecords.length ? "Choose a document" : "No documents available", record => `${record.title} (#${record.id})`);
-      fillSelect(assignmentProject, projects, projects.length ? "Choose a project" : "Create a project first", project => `${project.name} (#${project.id})`);
-      assignDocument.disabled = assigning || !allRecords.length || !projects.length;
-      count.textContent = term
-        ? `${records.length} matching document${records.length === 1 ? "" : "s"}`
-        : `${records.length} document${records.length === 1 ? "" : "s"} · ${projects.length} project${projects.length === 1 ? "" : "s"}`;
-      showMessage(status, records.length ? "" : term
-        ? "No matching documents."
-        : "Your library is empty. Add your first document to get started.");
-      for (const project of projects) {
-        const projectRecords = records.filter(record => record.projectId === project.id);
-        if (!term || projectRecords.length) {
-          addGroup(groups, project.name, projectRecords, () => deleteProject(project), project.id);
-        }
-      }
-      const unassigned = records.filter(record => record.projectId == null);
-      if (unassigned.length) addGroup(groups, "Unassigned", unassigned);
+      projects = fetchedProjects;
+      renderLibrary(allRecords, records);
+      return true;
     } catch (error) {
-      if (version !== loadVersion) return;
-      count.textContent = "Library unavailable";
-      showMessage(status, requestError(error, "Could not load your documents. Check that the server is running, then select Refresh."), "error");
+      if (version === loadVersion) {
+        showMessage(libraryStatus, requestError(error, "Could not load the library. Select Refresh to try again."), "error");
+      }
+      return false;
     } finally {
       if (version === loadVersion) refresh.disabled = false;
     }
   }
 
-  async function deleteProject(project) {
-    showMessage(projectStatus, `Deleting project "${project.name}"…`);
+  function openMoveDialog(record) {
+    const options = document.querySelector("#move-options");
+    document.querySelector("#move-document-title").textContent = record.title;
+    document.querySelector("#move-source").textContent = folderName(record);
+    options.replaceChildren();
+    showMessage(moveStatus, "");
+    for (const folder of [unassignedFolder, ...projects]) {
+      if (folder.id === record.projectId) continue;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "folder-link";
+      const label = document.createElement("span");
+      label.className = "folder-name";
+      label.textContent = folder.name;
+      button.append(projectIcon(folder.id), label);
+      button.addEventListener("click", () => moveDocument(record, folder));
+      options.append(button);
+    }
+    moveDialog.showModal();
+  }
+
+  async function moveDocument(record, folder) {
+    if (moving || record.projectId === folder.id) return;
+    moving = true;
+    const fromDialog = moveDialog.open;
+    const status = fromDialog ? moveStatus : libraryStatus;
+    moveDialog.toggleAttribute("data-busy", true);
+    showMessage(status, "");
     try {
-      await api(`/projects/${encodeURIComponent(project.id)}`, { method: "DELETE" });
-      showMessage(projectStatus, `Project "${project.name}" deleted. Its documents are now unassigned.`, "success");
+      if (folder.id == null) {
+        await api("/documents/" + record.id + "/project", { method: "DELETE" });
+      } else {
+        await api("/projects/" + folder.id + "/documents/" + record.id, { method: "PUT" });
+      }
       await loadLibrary();
+      if (fromDialog) {
+        moveDialog.close();
+        document.querySelector("#library-title").focus({ preventScroll: true });
+      }
     } catch (error) {
-      showMessage(projectStatus, requestError(error, "Could not confirm project deletion. Refresh the library before trying again."), "error");
+      const message = folder.id == null && (error.status === 404 || error.status === 405)
+        ? "Could not move to Unassigned. Refresh the library and check that the backend is up to date."
+        : "Could not move the document. Try again.";
+      showMessage(status, requestError(error, message), "error");
+    } finally {
+      moveDialog.removeAttribute("data-busy");
+      moving = false;
     }
   }
 
-  projectForm.addEventListener("submit", async event => {
-    event.preventDefault();
-    if (createProject.disabled) return;
-    const name = projectName.value.trim();
-    if (!name) {
-      showMessage(projectStatus, "Enter a project name.", "error");
-      projectName.focus();
+  for (const dialog of document.querySelectorAll("dialog")) {
+    dialog.querySelector("[data-close]").addEventListener("click", () => {
+      if (!dialog.hasAttribute("data-busy")) dialog.close();
+    });
+    dialog.addEventListener("cancel", event => {
+      if (dialog.hasAttribute("data-busy")) event.preventDefault();
+    });
+  }
+
+  function openUpload() {
+    showMessage(uploadStatus, "");
+    uploadDialog.showModal();
+  }
+
+  function updateFilePicker() {
+    const file = pdfInput.files[0];
+    document.querySelector("#pdf-name").textContent = file?.name ?? "PDF up to 10 MB";
+    document.querySelector("#choose-pdf-label").textContent = file ? "Change PDF" : "Choose PDF";
+    uploadButton.disabled = !file;
+  }
+
+  pdfInput.addEventListener("change", updateFilePicker);
+  uploadDialog.addEventListener("close", () => {
+    uploadForm.reset();
+    updateFilePicker();
+  });
+  document.querySelector("#open-upload").addEventListener("click", openUpload);
+  document.querySelector("#empty-upload").addEventListener("click", openUpload);
+  document.querySelector("#open-project").addEventListener("click", () => {
+    showMessage(projectStatus, "");
+    projectDialog.showModal();
+  });
+  function saveProjectIcon(emoji) {
+    try {
+      if (emoji) localStorage.setItem(projectEmojiKey(view), emoji);
+      else localStorage.removeItem(projectEmojiKey(view));
+    } catch {
+      showMessage(projectIconStatus, "Could not save the project icon in this browser.", "error");
       return;
     }
-    createProject.disabled = true;
-    projectName.disabled = true;
-    projectDescription.disabled = true;
-    showMessage(projectStatus, "Creating project…");
-    try {
-      await api("/projects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, description: projectDescription.value.trim() }),
-      });
-      projectForm.reset();
-      showMessage(projectStatus, "Project created. You can now assign documents to it.", "success");
-      await loadLibrary();
-    } catch (error) {
-      showMessage(projectStatus, requestError(error, "Could not confirm project creation. Refresh the library before trying again."), "error");
-    } finally {
-      createProject.disabled = false;
-      projectName.disabled = false;
-      projectDescription.disabled = false;
+    projectIconButton.replaceChildren(projectIcon(view));
+    projectLinks.querySelector('[aria-current="page"]')?.firstElementChild.replaceWith(projectIcon(view));
+    projectIconDialog.close();
+  }
+
+  const projectIconChoices = [
+    ["", "Default folder"],
+    ["📚", "Books"], ["🎓", "Graduation cap"], ["📝", "Notes"], ["📅", "Calendar"],
+    ["💻", "Laptop"], ["💼", "Briefcase"], ["🏠", "Home"], ["⭐", "Star"],
+    ["🎨", "Art palette"], ["🧪", "Test tube"], ["🔬", "Microscope"], ["🔧", "Wrench"],
+    ["🧩", "Puzzle piece"], ["⚙️", "Gear"], ["💡", "Light bulb"], ["🎯", "Target"],
+    ["📊", "Bar chart"], ["💰", "Money bag"], ["🧾", "Receipt"], ["📦", "Package"],
+    ["🚀", "Rocket"], ["🗺️", "Map"], ["✈️", "Airplane"], ["🚗", "Car"],
+    ["🌍", "Globe"], ["🌿", "Herb"], ["🌙", "Moon"], ["☀️", "Sun"],
+    ["🏔️", "Mountain"], ["📷", "Camera"], ["🎵", "Music note"],
+  ];
+  for (const [emoji, label] of projectIconChoices) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "button quiet";
+    button.value = emoji;
+    button.title = label;
+    button.setAttribute("aria-label", label);
+    button.append(projectGlyph(emoji));
+    button.addEventListener("click", () => saveProjectIcon(emoji));
+    projectIconOptions.append(button);
+  }
+  projectIconButton.addEventListener("click", () => {
+    const emoji = readProjectEmoji(view);
+    for (const button of projectIconOptions.children) {
+      button.setAttribute("aria-pressed", String(button.value === emoji));
     }
+    showMessage(projectIconStatus, "");
+    projectIconDialog.showModal();
+    const selected = projectIconOptions.querySelector('[aria-pressed="true"]');
+    (selected ?? projectIconOptions.firstElementChild).focus();
   });
 
-  assignmentForm.addEventListener("submit", async event => {
-    event.preventDefault();
-    if (assignDocument.disabled || !assignmentDocument.value || !assignmentProject.value) return;
-    assigning = true;
-    assignDocument.disabled = true;
-    assignmentDocument.disabled = true;
-    assignmentProject.disabled = true;
-    showMessage(assignmentStatus, "Assigning document…");
-    try {
-      await api(`/projects/${encodeURIComponent(assignmentProject.value)}/documents/${encodeURIComponent(assignmentDocument.value)}`, { method: "PUT" });
-      showMessage(assignmentStatus, "Document assigned to the project.", "success");
-    } catch (error) {
-      showMessage(assignmentStatus, requestError(error, "Could not confirm the assignment. Check the refreshed library before trying again."), "error");
-    } finally {
-      assigning = false;
-      await loadLibrary();
-    }
-  });
-
-  title.addEventListener("input", () => {
-    title.removeAttribute("aria-invalid");
-    showMessage(formError, "");
-    showMessage(formStatus, "");
-  });
-  form.addEventListener("submit", async event => {
-    event.preventDefault();
-    if (save.disabled) return;
-    showMessage(formError, "");
-    showMessage(formStatus, "");
-    const value = title.value.trim();
-    if (!value || value.length > 255) {
-      title.setAttribute("aria-invalid", "true");
-      showMessage(formError, !value ? "Enter a document title." : "The title must be 255 characters or fewer.", "error");
-      title.focus();
-      return;
-    }
-    title.removeAttribute("aria-invalid");
-    save.disabled = true;
-    title.disabled = true;
-    showMessage(formStatus, "Saving document…");
-    try {
-      await api("/documents", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: value }),
-      });
-      form.reset();
-      showMessage(formStatus, "Document saved. You can open it from your library.", "success");
-      await loadLibrary();
-    } catch (error) {
-      showMessage(formStatus, "");
-      showMessage(formError, requestError(error, error.status === 400
-        ? "The server rejected this title. Use between 1 and 255 characters."
-        : "Could not confirm the save. Refresh the library before trying again."), "error");
-    } finally {
-      save.disabled = false;
-      title.disabled = false;
-      title.focus();
-    }
-  });
-  searchForm.addEventListener("submit", event => {
-    event.preventDefault();
-    activeSearch = searchTerm.value.trim();
-    loadLibrary();
-  });
-  refresh.addEventListener("click", loadLibrary);
-  loadLibrary();
-
-  //pdf upload
   uploadForm.addEventListener("submit", async event => {
     event.preventDefault();
-
+    if (uploadButton.disabled) return;
     const file = pdfInput.files[0];
-    if (!file || uploadButton.disabled) return;
+    if (!file) return;
 
     const data = new FormData();
     data.append("file", file);
-
     uploadButton.disabled = true;
-    uploadStatus.textContent = "PDF wird hochgeladen…";
-
+    pdfInput.disabled = true;
+    uploadDialog.toggleAttribute("data-busy", true);
+    showMessage(uploadStatus, "Uploading PDF.");
     try {
-      await api("/documents", {
-       method: "POST",
-        body: data,
-      });
-
-      uploadForm.reset();
-      uploadStatus.textContent = "PDF erfolgreich hochgeladen.";
-      await loadLibrary();
+      await api("/documents", { method: "POST", body: data });
+      uploadDialog.close();
+      selectView("unassigned");
+      if (await loadLibrary()) showMessage(libraryStatus, "PDF uploaded to Unassigned.", "success");
     } catch (error) {
-      uploadStatus.textContent = error.status === 400 ? "Die Datei wurde abgelehnt. Bitte eine gültige PDF auswählen." : "Upload fehlgeschlagen.";
+      const message = error.status === 400 || error.status === 413
+        ? "Select a valid PDF up to 10 MB."
+        : "Could not confirm the upload. Refresh the library before retrying.";
+      showMessage(uploadStatus, requestError(error, message), "error");
     } finally {
-      uploadButton.disabled = false;
+      uploadDialog.removeAttribute("data-busy");
+      pdfInput.disabled = false;
+      updateFilePicker();
     }
+  });
+
+  projectForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    if (createProjectButton.disabled) return;
+    const name = document.querySelector("#project-name").value.trim();
+    const description = document.querySelector("#project-description").value.trim();
+    if (!name) {
+      showMessage(projectStatus, "Enter a project name.", "error");
+      document.querySelector("#project-name").focus();
+      return;
+    }
+    createProjectButton.disabled = true;
+    projectDialog.toggleAttribute("data-busy", true);
+    showMessage(projectStatus, "Creating project.");
+    try {
+      const project = await api("/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, description }),
+      });
+      projectForm.reset();
+      projectDialog.close();
+      selectView(String(project.id));
+      if (await loadLibrary()) showMessage(libraryStatus, "Project created.", "success");
+    } catch (error) {
+      showMessage(projectStatus, requestError(error, "Could not confirm project creation. Try again."), "error");
+    } finally {
+      projectDialog.removeAttribute("data-busy");
+      createProjectButton.disabled = false;
+    }
+  });
+
+  deleteProjectButton.addEventListener("click", async () => {
+    const project = projects.find(item => String(item.id) === view);
+    if (!project || !window.confirm("Delete " + project.name + "? Its documents will become unassigned.")) return;
+    deleteProjectButton.disabled = true;
+    try {
+      await api("/projects/" + project.id, { method: "DELETE" });
+      try { localStorage.removeItem(projectEmojiKey(project.id)); } catch { /* Browser storage is optional. */ }
+      selectView("all");
+      if (await loadLibrary()) showMessage(libraryStatus, "Project deleted. Its documents are now unassigned.", "success");
+    } catch (error) {
+      showMessage(libraryStatus, requestError(error, "Could not confirm project deletion. Refresh before retrying."), "error");
+    } finally {
+      deleteProjectButton.disabled = false;
+    }
+  });
+
+  document.querySelector("#search-form").addEventListener("submit", event => {
+    event.preventDefault();
+    showMessage(libraryStatus, "");
+    term = search.value.trim();
+    loadLibrary();
+  });
+  refresh.addEventListener("click", () => {
+    showMessage(libraryStatus, "");
+    loadLibrary();
+  });
+  loadLibrary().then(loaded => {
+    if (loaded) showMessage(libraryStatus, "");
   });
 }
 
@@ -414,18 +621,25 @@ function startDetail() {
   const details = document.querySelector("#document-details");
   const heading = document.querySelector("#document-heading");
   const deleteButton = document.querySelector("#delete-document");
-  const id = new URLSearchParams(window.location.search).get("id");
+  const backLabel = document.querySelector("#back-label");
+  const projectLink = document.querySelector("#detail-project");
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("id");
+  const backView = params.get("project") || "all";
+  const libraryUrl = viewUrl(backView);
+  document.querySelector("#back-to-library").href = libraryUrl;
+  if (backView !== "all") backLabel.textContent = backView === "unassigned" ? "Unassigned" : "Back to project";
 
   async function loadDocument() {
-    details.hidden = true;
-    deleteButton.hidden = true;
     if (!id || !/^[1-9]\d*$/.test(id)) {
-      showMessage(status, "No valid document was selected. Go back to the dashboard and choose a document.", "error");
+      showMessage(status, "No document selected. Go back to the library and choose a document.", "error");
       refresh.hidden = true;
       return;
     }
     refresh.disabled = true;
-    showMessage(status, "Loading document…");
+    deleteButton.disabled = true;
+    details.setAttribute("aria-busy", "true");
+    showMessage(status, details.hidden ? "Loading document…" : "");
     try {
       const record = await api(`/documents/${encodeURIComponent(id)}`);
       let projectName = "Unassigned";
@@ -439,20 +653,27 @@ function startDetail() {
       }
       heading.textContent = record.title;
       document.title = `${record.title} · Paperless`;
-      document.querySelector("#detail-title").textContent = record.title;
       document.querySelector("#detail-id").textContent = record.id;
-      document.querySelector("#detail-project").textContent = projectName;
-      document.querySelector("#detail-summary").textContent = record.summary ?? "No summary available.";
+      projectLink.textContent = projectName;
+      projectLink.href = viewUrl(record.projectId ?? "unassigned");
+      if (String(record.projectId) === backView) backLabel.textContent = projectName;
+      const summary = document.querySelector("#detail-summary");
+      summary.textContent = record.summary || "No summary available.";
+      summary.classList.toggle("muted", !record.summary);
       details.hidden = false;
       deleteButton.hidden = false;
       showMessage(status, "");
     } catch (error) {
+      details.hidden = true;
+      deleteButton.hidden = true;
       heading.textContent = error.status === 404 ? "Document not found" : "Document";
       showMessage(status, error.status === 404
         ? "This document does not exist. Go back to your library to choose another document."
         : requestError(error, "Could not load this document. Please select Refresh to try again."), "error");
     } finally {
+      details.removeAttribute("aria-busy");
       refresh.disabled = false;
+      deleteButton.disabled = false;
     }
   }
   deleteButton.addEventListener("click", async () => {
@@ -461,10 +682,10 @@ function startDetail() {
 
     deleteButton.disabled = true;
     refresh.disabled = true;
-    showMessage(status, "Deleting document…");
+    showMessage(status, "");
     try {
       await api(`/documents/${encodeURIComponent(id)}`, { method: "DELETE" });
-      window.location.assign("/");
+      window.location.assign(libraryUrl);
     } catch (error) {
       showMessage(status, requestError(error, "Could not confirm document deletion. Refresh the document before trying again."), "error");
       deleteButton.disabled = false;

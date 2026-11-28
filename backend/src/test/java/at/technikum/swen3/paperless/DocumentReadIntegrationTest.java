@@ -111,6 +111,26 @@ class DocumentReadIntegrationTest {
     }
 
     @Test
+    void unassigningDocumentPreservesItsSummaryAndProject() throws Exception {
+        var document = docService.createDocument("Project notes");
+        var project = service.createProject("University", "");
+        service.assignDocument(project.id(), document.id());
+        docService.saveSummary(document.id(), "A saved summary.");
+        String path = "/documents/" + document.id() + "/project";
+
+        assertThat(request("DELETE", path, null).statusCode()).isEqualTo(204);
+        assertThat(request("DELETE", path, null).statusCode()).isEqualTo(204);
+        var response = request("GET", "/documents/" + document.id(), null);
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body()).contains(
+                "\"title\":\"Project notes\"", "\"projectId\":null", "\"summary\":\"A saved summary.\"");
+        assertThat(projects.existsById(project.id())).isTrue();
+        assertThat(request("DELETE", "/documents/0/project", null).statusCode()).isEqualTo(400);
+        assertThat(request("DELETE", "/documents/9223372036854775807/project", null).statusCode())
+                .isEqualTo(404);
+    }
+
+    @Test
     void emptyLibraryReturnsEmptyArray() throws Exception {
         var response = request("GET", "/documents", null);
         assertThat(response.statusCode()).isEqualTo(200);

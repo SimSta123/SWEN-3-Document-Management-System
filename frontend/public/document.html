@@ -3,37 +3,44 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Document details · Paperless</title>
+  <title>Document | Paperless</title>
   <link rel="stylesheet" href="/styles.css">
   <script src="/app.js" defer></script>
 </head>
 <body data-page="detail">
-  <header class="site-header">
-    <a class="brand" href="/">paperless<span class="brand-dot">.</span></a>
-    <span class="header-label">Your document library</span>
+  <header class="app-header">
+    <a class="brand" href="/"><svg class="brand-icon" aria-hidden="true"><use href="/icons.svg#brand"/></svg>Paperless</a>
   </header>
-  <main class="detail-main">
-    <a class="back-link" href="/">← Back to documents</a>
-    <div class="page-heading">
-      <p class="eyebrow">DOCUMENT DETAILS</p>
-      <h1 id="document-heading">Document</h1>
-      <p class="intro">The information saved in your library.</p>
-    </div>
-    <section class="panel" aria-labelledby="details-title">
-      <div class="panel-heading">
-        <h2 id="details-title">Saved information</h2>
-        <button id="refresh" class="button secondary" type="button">Refresh</button>
+  <main class="detail-page">
+    <div class="detail-toolbar">
+      <a id="back-to-library" class="back-link" href="/">
+        <svg class="icon" aria-hidden="true"><use href="/icons.svg#back"/></svg>
+        <span id="back-label">All documents</span>
+      </a>
+      <div class="actions">
+        <button id="refresh" class="button quiet icon-button" type="button" aria-label="Refresh document" title="Refresh document">
+          <svg class="icon" aria-hidden="true"><use href="/icons.svg#refresh"/></svg>
+        </button>
+        <button id="delete-document" class="button quiet danger" type="button" hidden>Delete document</button>
       </div>
-      <p id="detail-status" class="message" role="status">Loading document…</p>
-      <dl id="document-details" hidden>
-        <div><dt>Title</dt><dd id="detail-title"></dd></div>
+    </div>
+    <div class="document-identity">
+      <span class="document-icon-tile">
+        <svg class="icon pdf-icon" aria-hidden="true"><use href="/icons.svg#pdf"/></svg>
+      </span>
+      <h1 id="document-heading">Document</h1>
+    </div>
+    <p id="detail-status" class="message" role="status">Loading document.</p>
+    <div id="document-details" hidden>
+      <dl class="metadata">
+        <div><dt>Project</dt><dd><a id="detail-project" href="/"></a></dd></div>
         <div><dt>Document ID</dt><dd id="detail-id"></dd></div>
-        <div><dt>Project</dt><dd id="detail-project"></dd></div>
-        <div><dt>Summary</dt><dd id="detail-summary"></dd></div>
       </dl>
-      <button id="delete-document" class="button danger" type="button" hidden>Delete document</button>
-    </section>
+      <section class="document-summary" aria-labelledby="summary-title">
+        <h2 id="summary-title">AI document summary</h2>
+        <p id="detail-summary"></p>
+      </section>
+    </div>
   </main>
-  <footer>Paperless <span aria-hidden="true">·</span> SWEN3</footer>
 </body>
 </html>

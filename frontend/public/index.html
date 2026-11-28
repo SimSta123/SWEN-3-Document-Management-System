@@ -3,82 +3,130 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Documents · Paperless</title>
+  <title>Paperless</title>
   <link rel="stylesheet" href="/styles.css">
   <script src="/app.js" defer></script>
 </head>
 <body data-page="dashboard">
-  <header class="site-header">
-    <a class="brand" href="/">paperless<span class="brand-dot">.</span></a>
-    <span class="header-label">Your document library</span>
+  <header class="app-header">
+    <a class="brand" href="/"><svg class="brand-icon" aria-hidden="true"><use href="/icons.svg#brand"/></svg>Paperless</a>
+    <form id="search-form" class="search" role="search">
+      <label class="visually-hidden" for="search-term">Search PDF text</label>
+      <input id="search-term" type="search" placeholder="Search PDF text" maxlength="255">
+      <button class="button quiet" type="submit">Search</button>
+    </form>
+    <button id="open-upload" class="button primary" type="button">
+      <svg class="icon" aria-hidden="true"><use href="/icons.svg#upload"/></svg>
+      Upload PDF
+    </button>
   </header>
-  <main>
-    <div class="page-heading">
-      <p class="eyebrow">YOUR WORKSPACE</p>
-      <h1>Documents</h1>
-      <p class="intro">Keep your documents together. Find the details in a click.</p>
-    </div>
-    <div class="workspace">
-      <section class="panel library" aria-labelledby="library-title">
-        <div class="panel-heading">
-          <div><h2 id="library-title">Your library</h2><p id="library-count" class="muted">Loading documents…</p></div>
-          <button id="refresh" class="button secondary" type="button">Refresh</button>
+
+  <div class="file-browser">
+    <nav class="sidebar" aria-label="Document folders">
+      <div id="library-links" class="folder-list"></div>
+      <div class="project-navigation">
+        <details open>
+          <summary>Projects</summary>
+          <div id="project-links" class="folder-list"></div>
+        </details>
+        <button id="open-project" class="button quiet new-project" type="button">New project</button>
+      </div>
+    </nav>
+
+    <main class="workspace">
+      <div class="view-header">
+        <div id="library-heading">
+          <div class="folder-title">
+            <button id="edit-project-icon" class="button quiet icon-button" type="button" aria-label="Change project icon" title="Change project icon" hidden></button>
+            <h1 id="library-title" tabindex="-1">All documents</h1>
+          </div>
+          <p id="project-description-view" class="project-description" hidden><strong>Description</strong> <span id="project-description-text"></span></p>
+          <p id="library-count" class="muted" aria-live="polite"></p>
         </div>
-        <form id="search-form" role="search">
-          <label for="search-term">Search document contents</label>
-          <input id="search-term" type="search" placeholder="e.g. Hello">
-          <button class="button" type="submit">Search</button>
-        </form>
-        <p id="library-status" class="message" role="status">Loading your library…</p>
-        <div id="document-groups"></div>
-      </section>
-      <aside>
-        <section class="panel" aria-labelledby="project-title">
-          <h2 id="project-title">Create a project</h2>
-          <form id="project-form">
-            <label for="project-name">Project name</label>
-            <input id="project-name" name="name" required maxlength="200" placeholder="e.g. SWEN3">
-            <label for="project-description">Description (optional)</label>
-            <textarea id="project-description" name="description" maxlength="2000" rows="3"></textarea>
-            <button id="create-project" class="button" type="submit">Create project</button>
-            <p id="project-status" class="message" role="status" hidden></p>
-          </form>
-        </section>
-        <section class="panel" aria-labelledby="assignment-title">
-          <h2 id="assignment-title">Assign a document</h2>
-          <p class="muted">Choose a project for a document. This replaces its current project.</p>
-          <form id="assignment-form">
-            <label for="assignment-document">Document</label>
-            <select id="assignment-document" required disabled></select>
-            <label for="assignment-project">Project</label>
-            <select id="assignment-project" required disabled></select>
-            <button id="assign-document" class="button" type="submit" disabled>Assign document</button>
-            <p id="assignment-status" class="message" role="status" hidden></p>
-          </form>
-        </section>
-        <section class="panel" aria-labelledby="add-title">
-          <p class="eyebrow">START SOMETHING NEW</p>
-          <h2 id="add-title">Add a document</h2>
-          <p class="muted">Give your document a title to save a record in your library.</p>
-          <form id="document-form" novalidate>
-            <label for="document-title">Document title</label>
-            <input id="document-title" name="title" type="text" required maxlength="255" aria-describedby="title-help form-error" placeholder="e.g. Sprint 2 notes">
-            <p id="title-help" class="field-help">A title is required. Maximum 255 characters.</p>
-            <p id="form-error" class="message error" role="alert" hidden></p>
-            <button id="save" class="button" type="submit">Save document <span aria-hidden="true">↗</span></button>
-            <p id="form-status" class="message success" role="status" hidden></p>
-          </form>
-          <form id="upload-form">
-            <label for="pdf-file">PDF auswählen</label>
-            <input id="pdf-file" type="file" accept=".pdf,application/pdf" required>
-            <button id="upload-button" class="button" type="submit">PDF hochladen</button>
-            <p id="upload-status" role="status"></p>
-          </form>
-        </section>
-        <p class="aside-note">Documents without a project appear under Unassigned.</p>
-      </aside>
+        <div class="actions">
+          <button id="refresh" class="button quiet icon-button" type="button" aria-label="Refresh documents" title="Refresh documents">
+            <svg class="icon" aria-hidden="true"><use href="/icons.svg#refresh"/></svg>
+          </button>
+          <button id="delete-project" class="button quiet danger" type="button" hidden>Delete project</button>
+        </div>
+      </div>
+      <p id="library-status" class="message" role="status">Loading documents.</p>
+      <div id="project-information"></div>
+      <div id="document-list-heading"></div>
+      <div id="document-list" class="document-list">
+        <div class="list-header" aria-hidden="true"><span>Name</span><span>Project</span><span></span></div>
+        <ul id="document-rows" class="file-list" aria-label="Documents"></ul>
+      </div>
+      <div id="empty-view" class="empty-view" hidden>
+        <p id="empty-text"></p>
+        <button id="empty-upload" class="button secondary" type="button" hidden>
+          <svg class="icon" aria-hidden="true"><use href="/icons.svg#upload"/></svg>
+          Upload PDF
+        </button>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="upload-dialog" aria-labelledby="upload-title">
+    <form id="upload-form">
+      <h2 id="upload-title">Upload PDF</h2>
+      <div class="file-picker">
+        <input id="pdf-file" class="visually-hidden" type="file" name="file" accept=".pdf,application/pdf" aria-describedby="pdf-name" required>
+        <label for="pdf-file" class="button secondary">
+          <svg class="icon" aria-hidden="true"><use href="/icons.svg#pdf"/></svg>
+          <span id="choose-pdf-label">Choose PDF</span>
+        </label>
+        <p id="pdf-name" class="muted" aria-live="polite">PDF up to 10 MB</p>
+      </div>
+      <p id="upload-status" class="message" role="status" hidden></p>
+      <div class="dialog-actions">
+        <button class="button quiet" type="button" data-close>Cancel</button>
+        <button id="upload-button" class="button primary" type="submit" disabled>Upload</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="project-dialog" aria-labelledby="project-title">
+    <form id="project-form">
+      <h2 id="project-title">New project</h2>
+      <label for="project-name">Name</label>
+      <input id="project-name" name="name" maxlength="200" required>
+      <label for="project-description">Description (optional)</label>
+      <textarea id="project-description" name="description" maxlength="2000" rows="3"></textarea>
+      <p id="project-status" class="message" role="status" hidden></p>
+      <div class="dialog-actions">
+        <button class="button quiet" type="button" data-close>Cancel</button>
+        <button id="create-project" class="button primary" type="submit">Create project</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="project-icon-dialog" aria-labelledby="project-icon-title">
+    <div class="project-icon-heading">
+      <h2 id="project-icon-title">Project icon</h2>
+      <button class="button quiet icon-button" type="button" data-close aria-label="Close icon picker">
+        <svg class="icon" aria-hidden="true"><use href="/icons.svg#close"/></svg>
+      </button>
     </div>
-  </main>
-  <footer>Paperless <span aria-hidden="true">·</span> SWEN3</footer>
+    <div id="project-icon-options" class="emoji-options" aria-label="Project icon options" role="group"></div>
+    <p id="project-icon-status" class="message" role="status" hidden></p>
+  </dialog>
+
+  <dialog id="move-dialog" aria-labelledby="move-title">
+    <h2 id="move-title">Move document</h2>
+    <div class="move-document">
+      <svg class="icon pdf-icon" aria-hidden="true"><use href="/icons.svg#pdf"/></svg>
+      <div>
+        <p id="move-document-title"></p>
+        <p class="muted">Currently in <span id="move-source"></span></p>
+      </div>
+    </div>
+    <p id="move-destination">Move to</p>
+    <div id="move-options" class="folder-list move-options" role="group" aria-labelledby="move-destination"></div>
+    <p id="move-status" class="message" role="status" hidden></p>
+    <div class="dialog-actions">
+      <button class="button quiet" type="button" data-close>Cancel</button>
+    </div>
+  </dialog>
 </body>
 </html>

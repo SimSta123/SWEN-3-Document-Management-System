@@ -98,6 +98,18 @@ public class DefaultProjectService implements ProjectService {
     }
 
     @Override
+    @Transactional
+    public void unassignDocument(Long documentId) {
+        if (documentId == null || documentId <= 0) {
+            throw new InvalidInputException("Document id must be positive");
+        }
+        if (documents.removeProject(documentId) == 0) {
+            throw new NotFoundException("Document not found");
+        }
+        logger.info("Unassigned documentId={}", documentId);
+    }
+
+    @Override
     public List<Document> listDocumentsInProject(Long projectId) {
         if (projectId == null || projectId <= 0) {
             logger.debug("listing documents failed, cause: project id must be positive, got={}", projectId);

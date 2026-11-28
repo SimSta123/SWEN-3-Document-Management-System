@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <symbol id="brand" viewBox="0 0 32 32">
+    <rect width="32" height="32" rx="8" fill="#22634d"/>
+    <path d="M8 17l8-5 8 5v3l-8 5-8-5z" fill="#a5d5be"/>
+    <path d="M8 12l8-5 8 5v3l-8 5-8-5z" fill="#fff"/>
+    <path d="M8 12l8 5 8-5" fill="none" stroke="#a5d5be" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="pdf" viewBox="0 0 24 24">
+    <g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 2.75h8l4 4v14.5H6a1 1 0 0 1-1-1V3.75a1 1 0 0 1 1-1Z"/>
+      <path d="M14 2.75v4h4M8.5 12h6M8.5 16h4"/>
+    </g>
+  </symbol>
+  <symbol id="folder" viewBox="0 0 24 24">
+    <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="currentColor" fill-opacity=".14" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+    <path d="M3 10h18" stroke="currentColor" stroke-width="1.5"/>
+  </symbol>
+  <symbol id="library" viewBox="0 0 24 24">
+    <g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2"/>
+      <path d="M3.5 9.5h17M9.5 14h5"/>
+    </g>
+  </symbol>
+  <symbol id="upload" viewBox="0 0 24 24">
+    <path d="M12 15V4m-4 4 4-4 4 4M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="move" viewBox="0 0 24 24">
+    <path d="M13 7h6a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-2M5 8V6a2 2 0 0 1 2-2h3l3 3M2 12h12m-3-3 3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="refresh" viewBox="0 0 24 24">
+    <path d="M20 4v5h-5m5 0a8 8 0 1 0 .2 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="close" viewBox="0 0 24 24">
+    <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="back" viewBox="0 0 24 24">
+    <path d="M19 12H5m6-6-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+</svg>
